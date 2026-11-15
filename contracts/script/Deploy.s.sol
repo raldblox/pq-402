@@ -7,9 +7,9 @@ import {PQ402Escrow} from "../src/PQ402Escrow.sol";
 
 /// @notice Deploys a PQ402Escrow on the QoreChain testnet.
 /// @dev The sender needs a registered ML-DSA-87 key and a live EVM window first
-///      (`pnpm testnet register gateway`, `pnpm testnet window gateway`).
+///      (`pnpm testnet register gateway`; deployment needs a window too).
 ///
-///      Environment (read from the repository's .env by the pnpm scripts):
+///      Environment (`pnpm testnet deploy` passes the repository .env):
 ///        GATEWAY_MNEMONIC   BIP-39 phrase of the deploying account (m/44'/60'/0'/0/0)
 ///        ESCROW_ASSET       token to hold (default: testnet fUSD)
 ///        WITHDRAWAL_DELAY   seconds a withdrawal waits (default: 3600)
