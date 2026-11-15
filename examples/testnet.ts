@@ -7,7 +7,9 @@
  *   pnpm testnet deploy [--broadcast] deploy PQ402Escrow from the gateway account (dry run by default)
  *   pnpm testnet register <who>       register <who>'s ML-DSA-87 key with proof of possession
  *   pnpm testnet register-kem <who>   register <who>'s ML-KEM-1024 key (hybrid-signed)
- *   pnpm testnet window <who>         open an EVM window scoped to the escrow (and fUSD for the payer)
+ *   pnpm testnet window <who>         open an EVM window scoped to the escrow (and fUSD for the payer);
+ *                                     for the gateway before ESCROW_ADDRESS is set, a one-transaction
+ *                                     window for the deployment
  *   pnpm testnet deposit <fusd>       payer: approve and deposit fUSD into the escrow
  *   pnpm testnet e2e                  run the paid endpoint and pay it, settling on chain
  *
@@ -281,10 +283,24 @@ async function registerKem(arg?: string): Promise<void> {
 
 async function window(arg?: string): Promise<void> {
   const party = await who(arg);
-  const escrow = requireEnv("ESCROW_ADDRESS");
+  const escrow = process.env.ESCROW_ADDRESS?.trim();
+  const perTx = evmWindowCost({ gas: 600_000n, maxFeePerGas: 250_000_000_000n });
+  if (!escrow) {
+    if (arg !== "gateway") throw new Error("deploy the escrow and set ESCROW_ADDRESS first");
+    // A contract creation has no target to scope to: one transaction, sized for the deployment.
+    const deployCost = evmWindowCost({ gas: 2_000_000n, maxFeePerGas: 250_000_000_000n });
+    const m = openEvmWindowMsg({
+      sender: party.qor,
+      blocks: 300n,
+      maxTxs: 1n,
+      maxValue: deployCost,
+      allowedTargets: [],
+    });
+    console.log(`opened a one-transaction deploy window: ${await broadcast(party, "hybrid", [m])}`);
+    return;
+  }
   const allowedTargets = arg === "payer" ? [escrow, FUSD] : [escrow];
   const maxTxs = 10n;
-  const perTx = evmWindowCost({ gas: 600_000n, maxFeePerGas: 250_000_000_000n });
   const m = openEvmWindowMsg({
     sender: party.qor,
     blocks: 2_000n,
