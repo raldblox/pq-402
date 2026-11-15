@@ -2,7 +2,7 @@ import {
   ML_DSA_87_ALGORITHM_ID,
   ML_DSA_87_PUBLIC_KEY_LENGTH,
   ORIGINAL_CONTENT_TYPE_HEADER,
-  SCHEME,
+  SCHEME_ERC20,
   SEALED_CONTENT_TYPE,
   SEALING_EXTENSION,
   openResponse,
@@ -19,7 +19,7 @@ import {
   type SealKeyPair,
   type SealingInfo,
 } from "@pq-402/core";
-import { PqEscrowClientScheme, type PqcKeyStatus } from "@pq-402/scheme-qorechain";
+import { PqErc20ClientScheme, type PqcKeyStatus } from "@pq-402/scheme-qorechain";
 import { x402Client, x402HTTPClient } from "@x402/core/client";
 import type { PaymentPayload, PaymentRequired, PaymentRequirements, SettleResponse } from "@x402/core/types";
 
@@ -94,7 +94,7 @@ async function bytesOf(res: Response): Promise<Uint8Array> {
  */
 export function createPq402Fetch(options: Pq402FetchOptions) {
   const doFetch = options.fetch ?? fetch;
-  const scheme = new PqEscrowClientScheme({
+  const scheme = new PqErc20ClientScheme({
     payer: options.payer,
     secretKey: options.mldsaSecretKey,
     ...(options.now ? { now: options.now } : {}),
@@ -127,8 +127,8 @@ export function createPq402Fetch(options: Pq402FetchOptions) {
       (name) => first.headers.get(name),
       await first.json().catch(() => undefined),
     );
-    const requirements = paymentRequired.accepts.find((a) => a.scheme === SCHEME);
-    if (!requirements) throw new Pq402Error("the server offers no pq-escrow payment");
+    const requirements = paymentRequired.accepts.find((a) => a.scheme === SCHEME_ERC20);
+    if (!requirements) throw new Pq402Error("the server offers no pq-erc20 payment");
     if (BigInt(requirements.amount) > options.maxAmount) {
       throw new Pq402Error(`price ${requirements.amount} exceeds the limit ${options.maxAmount}`);
     }

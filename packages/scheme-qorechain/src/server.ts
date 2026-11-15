@@ -1,4 +1,4 @@
-import { PROTOCOL_VERSION, SCHEME, sameAddress } from "@pq-402/core";
+import { PROTOCOL_VERSION, SCHEME_ERC20, sameAddress } from "@pq-402/core";
 import type {
   AssetAmount,
   Network,
@@ -11,24 +11,24 @@ import { convertToTokenAmount, parseMoney } from "@x402/core/utils";
 import type { Hex } from "viem";
 import type { QoreNetwork } from "./network.js";
 
-export interface PqEscrowServerOptions {
+export interface PqErc20ServerOptions {
   network: QoreNetwork;
   /** The `PQ402Escrow` deployment for the network's default asset. */
   escrow: Hex;
 }
 
 /**
- * x402 `SchemeNetworkServer` for `pq-escrow`: turns a price into requirements
+ * x402 `SchemeNetworkServer` for `pq-erc20`: turns a price into requirements
  * and adds the escrow address and protocol version to `extra`.
  */
-export class PqEscrowServerScheme implements SchemeNetworkServer {
-  readonly scheme = SCHEME;
+export class PqErc20ServerScheme implements SchemeNetworkServer {
+  readonly scheme = SCHEME_ERC20;
   readonly defaultAssetTransferMethod = "default";
   readonly paymentFlows = {
     default: { supported: ["authorization"] as const, default: "authorization" as const },
   };
 
-  constructor(private readonly options: PqEscrowServerOptions) {}
+  constructor(private readonly options: PqErc20ServerOptions) {}
 
   async parsePrice(price: Price, network: Network): Promise<AssetAmount> {
     this.requireNetwork(network);

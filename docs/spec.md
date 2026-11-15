@@ -1,4 +1,4 @@
-# PQ-402: the `pq-escrow` scheme and the `pq402-sealing` extension
+# PQ-402: the `pq-erc20` scheme and the `pq402-sealing` extension
 
 Version 1. Status: draft, implemented in this repository.
 
@@ -6,7 +6,7 @@ The key words MUST, MUST NOT, SHOULD and MAY are to be read as in RFC 2119.
 
 ## 1. Summary
 
-`pq-escrow` is an x402 v2 payment scheme in which the payer authorises each
+`pq-erc20` is an x402 v2 payment scheme in which the payer authorises each
 payment with an **ML-DSA-87** signature, made with the key registered for its
 account on QoreChain, and a contract settles it after verifying that
 signature on chain. `pq402-sealing` is an x402 extension that seals the
@@ -30,7 +30,7 @@ Everything not stated here is x402 v2 as specified upstream
 
 ```json
 {
-  "scheme": "pq-escrow",
+  "scheme": "pq-erc20",
   "network": "eip155:9800",
   "amount": "10000",
   "asset": "0x97143B771D34ddb9130b807b135Ae675A5a963CA",
@@ -104,25 +104,25 @@ as `invalidReason`:
 
 | # | Check | Code |
 |---|---|---|
-| 1 | `scheme` is `pq-escrow`, `network` is supported | `invalid_scheme`, `invalid_network` |
-| 2 | `extra.version` is `"1"`, `extra.escrow` is an address | `invalid_pq_escrow_version` |
-| 3 | `accepted` equals the requirements | `invalid_pq_escrow_requirements_mismatch` |
-| 4 | payload fields are well formed; signature is 4627 bytes | `invalid_pq_escrow_payload` |
-| 5 | `validAfter <= now` | `invalid_pq_escrow_not_yet_valid` |
-| 6 | `now + margin < validBefore` (margin: 6 s by default, time to settle) | `invalid_pq_escrow_expired` |
-| 7 | the nonce is unused on chain | `invalid_pq_escrow_nonce_used` |
-| 8 | `pqcKeyStatus(payer)` answers and reports registered, possession proven, algorithm 1, 2592-byte key | `invalid_pq_escrow_key` |
-| 9 | ML-DSA-87 verification of the signature over the message with that key | `invalid_pq_escrow_signature` |
+| 1 | `scheme` is `pq-erc20`, `network` is supported | `invalid_scheme`, `invalid_network` |
+| 2 | `extra.version` is `"1"`, `extra.escrow` is an address | `invalid_pq402_version` |
+| 3 | `accepted` equals the requirements | `invalid_pq402_requirements_mismatch` |
+| 4 | payload fields are well formed; signature is 4627 bytes | `invalid_pq402_payload` |
+| 5 | `validAfter <= now` | `invalid_pq402_not_yet_valid` |
+| 6 | `now + margin < validBefore` (margin: 6 s by default, time to settle) | `invalid_pq402_expired` |
+| 7 | the nonce is unused on chain | `invalid_pq402_nonce_used` |
+| 8 | `pqcKeyStatus(payer)` answers and reports registered, possession proven, algorithm 1, 2592-byte key | `invalid_pq402_key` |
+| 9 | ML-DSA-87 verification of the signature over the message with that key | `invalid_pq402_signature` |
 | 10 | the payer's escrow balance is at least `amount` | `insufficient_funds` |
 
 A chain read that fails, or a precompile that returns data of the wrong
-length, MUST make verification fail (`invalid_pq_escrow_chain_unavailable`),
+length, MUST make verification fail (`invalid_pq402_chain_unavailable`),
 never pass.
 
 Before calling the facilitator, a resource server using the HTTP transport
 MUST recompute `requestHash` from the request it received and refuse a
-mismatch with `invalid_pq_escrow_request_hash`, and MUST refuse a nonce it
-has already accepted and not yet seen fail with `invalid_pq_escrow_replay`.
+mismatch with `invalid_pq402_request_hash`, and MUST refuse a nonce it
+has already accepted and not yet seen fail with `invalid_pq402_replay`.
 
 ## 7. Settlement
 

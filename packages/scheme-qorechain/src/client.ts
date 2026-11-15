@@ -1,8 +1,8 @@
-import { createPayload, parseExtra, SCHEME } from "@pq-402/core";
+import { createPayload, parseExtra, SCHEME_ERC20 } from "@pq-402/core";
 import type { PaymentPayloadResult, PaymentRequirements, SchemeNetworkClient } from "@x402/core/types";
 import type { Hex } from "viem";
 
-export interface PqEscrowClientOptions {
+export interface PqErc20ClientOptions {
   /** The paying account (its `0x` form). */
   payer: Hex;
   /** The payer's ML-DSA-87 secret key, matching the key registered on chain. */
@@ -12,22 +12,22 @@ export interface PqEscrowClientOptions {
 }
 
 /**
- * x402 `SchemeNetworkClient` for `pq-escrow`. A payment commits to one HTTP
+ * x402 `SchemeNetworkClient` for `pq-erc20`. A payment commits to one HTTP
  * request, which the scheme interface cannot see, so the instance registered
  * with an `x402Client` must be bound to the request first with
- * {@link PqEscrowClientScheme.forRequest}. `@pq-402/client` does this per call.
+ * {@link PqErc20ClientScheme.forRequest}. `@pq-402/client` does this per call.
  */
-export class PqEscrowClientScheme implements SchemeNetworkClient {
-  readonly scheme = SCHEME;
+export class PqErc20ClientScheme implements SchemeNetworkClient {
+  readonly scheme = SCHEME_ERC20;
 
   constructor(
-    private readonly options: PqEscrowClientOptions,
+    private readonly options: PqErc20ClientOptions,
     private readonly requestHash?: Hex,
   ) {}
 
   /** A copy of this scheme that pays for the request with this `requestHash`. */
-  forRequest(requestHash: Hex): PqEscrowClientScheme {
-    return new PqEscrowClientScheme(this.options, requestHash);
+  forRequest(requestHash: Hex): PqErc20ClientScheme {
+    return new PqErc20ClientScheme(this.options, requestHash);
   }
 
   async createPaymentPayload(
@@ -35,10 +35,10 @@ export class PqEscrowClientScheme implements SchemeNetworkClient {
     requirements: PaymentRequirements,
   ): Promise<PaymentPayloadResult> {
     if (!this.requestHash) {
-      throw new Error("PqEscrowClientScheme: bind the request first with forRequest(requestHash)");
+      throw new Error("PqErc20ClientScheme: bind the request first with forRequest(requestHash)");
     }
     if (!parseExtra(requirements.extra)) {
-      throw new Error("payment requirements are not pq-escrow version 1");
+      throw new Error("payment requirements are not pq-erc20 version 1");
     }
     const payload = createPayload({
       requirements,

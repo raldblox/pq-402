@@ -18,7 +18,7 @@ import {
 
 const payer = mldsaKeyPair(new Uint8Array(32).fill(9));
 const requirements: PaymentRequirements = {
-  scheme: "pq-escrow",
+  scheme: "pq-erc20",
   network: "eip155:9800",
   amount: "10000",
   asset: "0x97143B771D34ddb9130b807b135Ae675A5a963CA",

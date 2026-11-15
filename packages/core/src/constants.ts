@@ -1,7 +1,7 @@
 import { keccak256, stringToBytes } from "viem";
 
 /** x402 scheme identifier of PQ-402 payments. */
-export const SCHEME = "pq-escrow";
+export const SCHEME_ERC20 = "pq-erc20";
 
 /** Version of the PQ-402 message formats, carried in `requirements.extra.version`. */
 export const PROTOCOL_VERSION = "1";

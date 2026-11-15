@@ -9,7 +9,7 @@ import {
   sameAddress,
   ML_DSA_87_ALGORITHM_ID,
   ML_DSA_87_PUBLIC_KEY_LENGTH,
-  SCHEME,
+  SCHEME_ERC20,
   type Payment,
 } from "@pq-402/core";
 import type {
@@ -22,7 +22,7 @@ import type {
 } from "@x402/core/types";
 import type { ChainReader, Settler } from "./chain.js";
 
-export interface PqEscrowFacilitatorOptions {
+export interface PqErc20FacilitatorOptions {
   /** Networks this facilitator serves, e.g. `["eip155:9800"]`. */
   networks: Network[];
   reader: ChainReader;
@@ -38,15 +38,15 @@ type Outcome =
 const fail = (code: ErrorCode, message: string): Outcome => ({ ok: false, code, message });
 
 /**
- * x402 `SchemeNetworkFacilitator` for `pq-escrow` (docs/spec.md, sections 6 and 7).
+ * x402 `SchemeNetworkFacilitator` for `pq-erc20` (docs/spec.md, sections 6 and 7).
  * Register it on an `x402Facilitator`, or call `verify` / `settle` directly.
  */
-export class PqEscrowFacilitator implements SchemeNetworkFacilitator {
-  readonly scheme = SCHEME;
+export class PqErc20Facilitator implements SchemeNetworkFacilitator {
+  readonly scheme = SCHEME_ERC20;
   readonly caipFamily = "eip155:*";
   private readonly margin: number;
 
-  constructor(private readonly options: PqEscrowFacilitatorOptions) {
+  constructor(private readonly options: PqErc20FacilitatorOptions) {
     this.margin = options.settlementMargin ?? 6;
   }
 
@@ -122,8 +122,8 @@ export class PqEscrowFacilitator implements SchemeNetworkFacilitator {
   /** The checks of docs/spec.md section 6, in order; the first failure wins. */
   private async check(payload: PaymentPayload, requirements: PaymentRequirements): Promise<Outcome> {
     const accepted = payload.accepted;
-    if (requirements.scheme !== SCHEME || accepted?.scheme !== SCHEME) {
-      return fail(ErrorCode.InvalidScheme, `scheme must be ${SCHEME}`);
+    if (requirements.scheme !== SCHEME_ERC20 || accepted?.scheme !== SCHEME_ERC20) {
+      return fail(ErrorCode.InvalidScheme, `scheme must be ${SCHEME_ERC20}`);
     }
     if (!this.options.networks.includes(requirements.network)) {
       return fail(ErrorCode.InvalidNetwork, `network ${requirements.network} is not served here`);

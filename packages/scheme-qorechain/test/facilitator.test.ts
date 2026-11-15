@@ -1,10 +1,10 @@
 import { mldsaKeyPair, toBase64, fromBase64, ErrorCode } from "@pq-402/core";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { describe, expect, it } from "vitest";
-import { PqEscrowClientScheme, PqEscrowFacilitator } from "../src/index.js";
+import { PqErc20ClientScheme, PqErc20Facilitator } from "../src/index.js";
 import { PAYEE, PAYER, RELAYER, T0, paymentPayload, requirements, setup } from "./fixtures.js";
 
-describe("PqEscrowFacilitator.verify", () => {
+describe("PqErc20Facilitator.verify", () => {
   it("accepts a payment signed with the payer's registered key", async () => {
     const { facilitator, client } = setup();
     const result = await facilitator.verify(await paymentPayload(client), requirements);
@@ -14,7 +14,7 @@ describe("PqEscrowFacilitator.verify", () => {
   it("refuses a forged signature (other key)", async () => {
     const { facilitator } = setup();
     const mallory = mldsaKeyPair(new Uint8Array(32).fill(66));
-    const forger = new PqEscrowClientScheme({ payer: PAYER, secretKey: mallory.secretKey, now: () => T0 });
+    const forger = new PqErc20ClientScheme({ payer: PAYER, secretKey: mallory.secretKey, now: () => T0 });
     const result = await facilitator.verify(await paymentPayload(forger), requirements);
     expect(result.invalidReason).toBe(ErrorCode.InvalidSignature);
   });
@@ -64,7 +64,7 @@ describe("PqEscrowFacilitator.verify", () => {
       expect(result.invalidReason).toBe(ErrorCode.InvalidKey);
     }
     const { facilitator } = setup();
-    const stranger = new PqEscrowClientScheme({
+    const stranger = new PqErc20ClientScheme({
       payer: "0x7777777777777777777777777777777777777777",
       secretKey: mldsaKeyPair().secretKey,
       now: () => T0,
@@ -80,7 +80,7 @@ describe("PqEscrowFacilitator.verify", () => {
     expect((await facilitator.verify(pp, requirements)).invalidReason).toBe(ErrorCode.Expired);
 
     const early = setup();
-    const future = new PqEscrowClientScheme({ payer: PAYER, secretKey: setupKey(), now: () => T0 + 600 });
+    const future = new PqErc20ClientScheme({ payer: PAYER, secretKey: setupKey(), now: () => T0 + 600 });
     expect((await early.facilitator.verify(await paymentPayload(future), requirements)).invalidReason).toBe(
       ErrorCode.NotYetValid,
     );
@@ -123,7 +123,7 @@ describe("PqEscrowFacilitator.verify", () => {
   });
 });
 
-describe("PqEscrowFacilitator.settle", () => {
+describe("PqErc20Facilitator.settle", () => {
   it("settles once and refuses the same payload again", async () => {
     const { chain, facilitator, client } = setup();
     const pp = await paymentPayload(client);
@@ -141,7 +141,7 @@ describe("PqEscrowFacilitator.settle", () => {
 
   it("does not settle without a settler", async () => {
     const { chain, client } = setup();
-    const verifyOnly = new PqEscrowFacilitator({ networks: ["eip155:9800"], reader: chain });
+    const verifyOnly = new PqErc20Facilitator({ networks: ["eip155:9800"], reader: chain });
     const result = await verifyOnly.settle(await paymentPayload(client), requirements);
     expect(result.success).toBe(false);
     expect(verifyOnly.getSigners("eip155:9800")).toEqual([]);
@@ -151,7 +151,7 @@ describe("PqEscrowFacilitator.settle", () => {
     const { facilitator, client } = setup();
     const x402 = new x402Facilitator().register("eip155:9800", facilitator);
     expect(x402.getSupported().kinds).toEqual([
-      { x402Version: 2, scheme: "pq-escrow", network: "eip155:9800" },
+      { x402Version: 2, scheme: "pq-erc20", network: "eip155:9800" },
     ]);
     expect(x402.getSupported().signers).toEqual({ "eip155:*": [RELAYER] });
     const pp = await paymentPayload(client);

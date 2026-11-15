@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { ErrorCode, generateSealKeys, mldsaKeyPair, SEALED_CONTENT_TYPE, type Hex } from "@pq-402/core";
-import { MemoryChain, PqEscrowFacilitator, qorechainTestnet } from "@pq-402/scheme-qorechain";
+import { MemoryChain, PqErc20Facilitator, qorechainTestnet } from "@pq-402/scheme-qorechain";
 import { nodeListener, PaymentGate, type Facilitator, type Handler } from "@pq-402/server";
 import { x402Client, x402HTTPClient } from "@x402/core/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -51,7 +51,7 @@ async function start(
     chain.registerKemKey(GATEWAY, gatewaySeal.mlkemPublicKey);
     chain.deposit(PAYER, 1_000_000n);
   }
-  const base = new PqEscrowFacilitator({
+  const base = new PqErc20Facilitator({
     networks: ["eip155:9800"],
     reader: chain,
     settler: chain.settler(RELAYER),
@@ -181,7 +181,7 @@ describe("what a stock x402 client sees", () => {
     const http = new x402HTTPClient(new x402Client());
     const required = http.getPaymentRequiredResponse((n) => res.headers.get(n), await res.json());
     expect(required.x402Version).toBe(2);
-    expect(required.accepts[0]?.scheme).toBe("pq-escrow");
+    expect(required.accepts[0]?.scheme).toBe("pq-erc20");
     expect(required.accepts[0]?.amount).toBe("10000");
     expect(required.extensions?.["pq402-sealing"]).toBeDefined();
     await expect(http.createPaymentPayload(required)).rejects.toThrow();

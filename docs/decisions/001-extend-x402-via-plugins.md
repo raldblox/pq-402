@@ -25,14 +25,14 @@ Two things the plugin interfaces cannot do on their own:
 
 - **No fork.** PQ-402 depends on `@x402/core` 2.31 and implements its
   interfaces:
-  - `PqEscrowClientScheme` (`SchemeNetworkClient`) builds and signs the
+  - `PqErc20ClientScheme` (`SchemeNetworkClient`) builds and signs the
     payload;
-  - `PqEscrowServerScheme` (`SchemeNetworkServer`) turns a price into
+  - `PqErc20ServerScheme` (`SchemeNetworkServer`) turns a price into
     requirements;
-  - `PqEscrowFacilitator` (`SchemeNetworkFacilitator`) verifies and settles.
+  - `PqErc20Facilitator` (`SchemeNetworkFacilitator`) verifies and settles.
   All three are registered for the network `eip155:9800` (CAIP-2 of the
   QoreChain testnet's EVM chain id).
-- **Scheme name `pq-escrow`.** A new identifier, so a stock x402 client that
+- **Scheme name `pq-erc20`** (first named `pq-escrow`; renamed by [007](007-two-schemes.md)).** A new identifier, so a stock x402 client that
   only knows `exact` skips the entry instead of building a payment it cannot
   sign. It still parses the whole `402`: the headers and JSON shapes are
   unchanged x402 v2.
@@ -45,7 +45,7 @@ Two things the plugin interfaces cannot do on their own:
   own version: `extra.version = "1"`, and the version is also inside every
   signed domain tag (`"PQ-402/v1 payment"`, …), so a v2 message can never be
   mistaken for a v1 one. A server that sees an unknown `extra.version` answers
-  `invalid_pq_escrow_version`.
+  `invalid_pq402_version`.
 - **Request binding and sealing live in the HTTP layer.** The client wrapper
   computes `requestHash` from the bytes it is about to send and hands it to
   the scheme client for that one request. The server middleware recomputes it

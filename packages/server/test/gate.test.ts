@@ -1,5 +1,5 @@
 import { ErrorCode, generateSealKeys, mldsaKeyPair, type Hex } from "@pq-402/core";
-import { MemoryChain, PqEscrowFacilitator, qorechainTestnet } from "@pq-402/scheme-qorechain";
+import { MemoryChain, PqErc20Facilitator, qorechainTestnet } from "@pq-402/scheme-qorechain";
 import { decodePaymentRequiredHeader, encodePaymentSignatureHeader } from "@x402/core/http";
 import { describe, expect, it } from "vitest";
 import { NonceCache, PaymentGate, type GateRequest, type Handler } from "../src/index.js";
@@ -12,7 +12,7 @@ function gate(sealing = true) {
   return new PaymentGate({
     network: qorechainTestnet,
     escrow: ESCROW,
-    facilitator: new PqEscrowFacilitator({ networks: ["eip155:9800"], reader: chain }),
+    facilitator: new PqErc20Facilitator({ networks: ["eip155:9800"], reader: chain }),
     kemKeys: chain,
     ...(sealing
       ? {
@@ -52,7 +52,7 @@ describe("PaymentGate", () => {
     expect(required.resource).toEqual({ url: "http://localhost/paid?q=1", description: "paid thing" });
     expect(required.accepts).toEqual([
       {
-        scheme: "pq-escrow",
+        scheme: "pq-erc20",
         network: "eip155:9800",
         asset: "0x97143B771D34ddb9130b807b135Ae675A5a963CA",
         amount: "250000",

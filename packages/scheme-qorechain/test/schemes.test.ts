@@ -6,15 +6,15 @@ import {
   ChainUnavailableError,
   EvmChainReader,
   pqcPrecompileAbi,
-  PqEscrowClientScheme,
-  PqEscrowServerScheme,
+  PqErc20ClientScheme,
+  PqErc20ServerScheme,
   qorechainTestnet,
   viemChainOf,
 } from "../src/index.js";
 import { ESCROW, PAYER, REQUEST_HASH, T0, payerKeys, requirements } from "./fixtures.js";
 
-describe("PqEscrowServerScheme", () => {
-  const server = new PqEscrowServerScheme({ network: qorechainTestnet, escrow: ESCROW });
+describe("PqErc20ServerScheme", () => {
+  const server = new PqErc20ServerScheme({ network: qorechainTestnet, escrow: ESCROW });
 
   it("prices dollars in fUSD atomic units", async () => {
     expect(await server.parsePrice("$0.01", "eip155:9800")).toEqual({
@@ -33,7 +33,7 @@ describe("PqEscrowServerScheme", () => {
     const base = { ...requirements, extra: {} };
     const out = await server.enhancePaymentRequirements(
       base,
-      { x402Version: 2, scheme: "pq-escrow", network: "eip155:9800" },
+      { x402Version: 2, scheme: "pq-erc20", network: "eip155:9800" },
       [],
     );
     expect(out.extra).toEqual({ escrow: ESCROW, version: "1" });
@@ -45,7 +45,7 @@ describe("PqEscrowServerScheme", () => {
   });
 });
 
-describe("PqEscrowClientScheme with x402Client", () => {
+describe("PqErc20ClientScheme with x402Client", () => {
   const paymentRequired: PaymentRequired = {
     x402Version: 2,
     resource: { url: "http://localhost/paid/hello" },
@@ -53,17 +53,17 @@ describe("PqEscrowClientScheme with x402Client", () => {
   };
 
   it("refuses to sign before it is bound to a request", async () => {
-    const scheme = new PqEscrowClientScheme({ payer: PAYER, secretKey: payerKeys.secretKey });
+    const scheme = new PqErc20ClientScheme({ payer: PAYER, secretKey: payerKeys.secretKey });
     await expect(scheme.createPaymentPayload(2, requirements)).rejects.toThrow(/forRequest/);
   });
 
   it("is selected by x402Client from a 402 that also offers exact", async () => {
-    const scheme = new PqEscrowClientScheme({ payer: PAYER, secretKey: payerKeys.secretKey, now: () => T0 });
+    const scheme = new PqErc20ClientScheme({ payer: PAYER, secretKey: payerKeys.secretKey, now: () => T0 });
     const client = new x402Client().register("eip155:9800", scheme.forRequest(REQUEST_HASH));
     client.setSpendControls(false);
     const payload = await client.createPaymentPayload(paymentRequired);
     expect(payload.x402Version).toBe(2);
-    expect(payload.accepted.scheme).toBe("pq-escrow");
+    expect(payload.accepted.scheme).toBe("pq-erc20");
     expect(payload.payload.requestHash).toBe(REQUEST_HASH);
     expect(payload.payload.payer).toBe(PAYER);
   });

@@ -5,8 +5,8 @@ import { ML_DSA_87_SIGNATURE_LENGTH, PROTOCOL_VERSION } from "./constants.js";
 import { paymentMessage, type Payment } from "./encoding.js";
 import { mldsaSign } from "./mldsa.js";
 
-/** `PaymentPayload.payload` of the `pq-escrow` scheme (docs/spec.md section 4). */
-export interface PqEscrowPayload {
+/** `PaymentPayload.payload` of the `pq-erc20` scheme (docs/spec.md section 4). */
+export interface PqErc20Payload {
   payer: Hex;
   nonce: Hex;
   validAfter: string;
@@ -16,8 +16,8 @@ export interface PqEscrowPayload {
   signature: string;
 }
 
-/** `PaymentRequirements.extra` of the `pq-escrow` scheme. */
-export interface PqEscrowExtra {
+/** `PaymentRequirements.extra` of the `pq-erc20` scheme. */
+export interface PqErc20Extra {
   escrow: Hex;
   version: typeof PROTOCOL_VERSION;
 }
@@ -31,7 +31,7 @@ export function evmChainIdOf(network: string): bigint {
   return BigInt(m[1]);
 }
 
-export function parseExtra(extra: unknown): PqEscrowExtra | undefined {
+export function parseExtra(extra: unknown): PqErc20Extra | undefined {
   if (typeof extra !== "object" || extra === null) return undefined;
   const e = extra as Record<string, unknown>;
   if (e.version !== PROTOCOL_VERSION || !isAddress(e.escrow)) return undefined;
@@ -39,7 +39,7 @@ export function parseExtra(extra: unknown): PqEscrowExtra | undefined {
 }
 
 /** Type-checks an untrusted payload. Returns `undefined` if anything is malformed. */
-export function parsePayload(payload: unknown): PqEscrowPayload | undefined {
+export function parsePayload(payload: unknown): PqErc20Payload | undefined {
   if (typeof payload !== "object" || payload === null) return undefined;
   const p = payload as Record<string, unknown>;
   if (!isAddress(p.payer) || !isHexOfLength(p.nonce, 32) || !isHexOfLength(p.requestHash, 32))
@@ -64,9 +64,9 @@ export function parsePayload(payload: unknown): PqEscrowPayload | undefined {
 }
 
 /** The payment a payload authorises against the requirements it accepted. */
-export function paymentOf(requirements: PaymentRequirements, payload: PqEscrowPayload): Payment {
+export function paymentOf(requirements: PaymentRequirements, payload: PqErc20Payload): Payment {
   const extra = parseExtra(requirements.extra);
-  if (!extra) throw new Error("requirements are not pq-escrow v1");
+  if (!extra) throw new Error("requirements are not pq-erc20 v1");
   if (!isAddress(requirements.payTo) || !isAddress(requirements.asset)) {
     throw new Error("payTo and asset must be addresses");
   }
@@ -99,8 +99,8 @@ export interface CreatePayloadArgs {
   skew?: number;
 }
 
-/** Build and sign a `pq-escrow` payload for one request. */
-export function createPayload(args: CreatePayloadArgs): PqEscrowPayload {
+/** Build and sign a `pq-erc20` payload for one request. */
+export function createPayload(args: CreatePayloadArgs): PqErc20Payload {
   const nonce = args.nonce ?? crypto.getRandomValues(new Uint8Array(32));
   if (nonce.length !== 32) throw new RangeError("nonce must be 32 bytes");
   const skew = args.skew ?? 30;

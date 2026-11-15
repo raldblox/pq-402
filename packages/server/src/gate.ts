@@ -2,7 +2,7 @@ import {
   ErrorCode,
   ORIGINAL_CONTENT_TYPE_HEADER,
   PROTOCOL_VERSION,
-  SCHEME,
+  SCHEME_ERC20,
   SEALED_CONTENT_TYPE,
   SEALING_EXTENSION,
   openRequest,
@@ -17,7 +17,7 @@ import {
   type SealKeyPair,
   type SealingInfo,
 } from "@pq-402/core";
-import { PqEscrowServerScheme, type QoreNetwork } from "@pq-402/scheme-qorechain";
+import { PqErc20ServerScheme, type QoreNetwork } from "@pq-402/scheme-qorechain";
 import {
   decodePaymentSignatureHeader,
   encodePaymentRequiredHeader,
@@ -36,7 +36,7 @@ import { NonceCache } from "./nonces.js";
 /** Header a sealing client sends on its first, body-less attempt (docs/spec.md section 8.2). */
 export const PROBE_HEADER = "PQ402-Probe";
 
-/** Anything with x402 facilitator `verify` and `settle`: an `x402Facilitator`, an `HTTPFacilitatorClient`, or a `PqEscrowFacilitator`. */
+/** Anything with x402 facilitator `verify` and `settle`: an `x402Facilitator`, an `HTTPFacilitatorClient`, or a `PqErc20Facilitator`. */
 export interface Facilitator {
   verify(payload: PaymentPayload, requirements: PaymentRequirements): Promise<VerifyResponse>;
   settle(payload: PaymentPayload, requirements: PaymentRequirements): Promise<SettleResponse>;
@@ -119,12 +119,12 @@ const json = (value: unknown) => new TextEncoder().encode(JSON.stringify(value))
  * the handler, seal the response, settle, sign the receipt.
  */
 export class PaymentGate {
-  private readonly scheme: PqEscrowServerScheme;
+  private readonly scheme: PqErc20ServerScheme;
   private readonly nonces = new NonceCache();
   private readonly now: () => number;
 
   constructor(private readonly options: PaymentGateOptions) {
-    this.scheme = new PqEscrowServerScheme({ network: options.network, escrow: options.escrow });
+    this.scheme = new PqErc20ServerScheme({ network: options.network, escrow: options.escrow });
     this.now = options.now ?? (() => Math.floor(Date.now() / 1000));
   }
 
@@ -152,7 +152,7 @@ export class PaymentGate {
     const { asset, amount } = await this.scheme.parsePrice(route.price, network);
     return this.scheme.enhancePaymentRequirements(
       {
-        scheme: SCHEME,
+        scheme: SCHEME_ERC20,
         network,
         asset,
         amount,
@@ -160,7 +160,7 @@ export class PaymentGate {
         maxTimeoutSeconds: this.options.maxTimeoutSeconds ?? 120,
         extra: {},
       },
-      { x402Version: 2, scheme: SCHEME, network },
+      { x402Version: 2, scheme: SCHEME_ERC20, network },
       [],
     );
   }

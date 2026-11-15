@@ -26,7 +26,7 @@ serves, settles and returns `PAYMENT-RESPONSE`: base64 of a `SettleResponse`
 - **Payment flows.** The default `authorization` flow is
   verify → resource → settle. PQ-402 uses it.
 - **Error codes.** `invalidReason` / `errorReason` are stable strings; the
-  message text is not. PQ-402 adds its own `invalid_pq_escrow_*` codes in the
+  message text is not. PQ-402 adds its own `invalid_pq402_*` codes in the
   style of `invalid_exact_evm_*`.
 - **Plugins.** `@x402/core` exposes `SchemeNetworkClient`
   (`createPaymentPayload`), `SchemeNetworkServer` (`parsePrice`,

@@ -9,7 +9,7 @@ import {PQ402Messages} from "./libraries/PQ402Messages.sol";
 
 /// @title PQ402Escrow
 /// @notice Holds payers' deposits of one ERC-20 and pays them out on ML-DSA-87 signed payments.
-/// @dev Settlement of the PQ-402 `pq-escrow` scheme (docs/spec.md, section 7). A payment is valid
+/// @dev Settlement of the PQ-402 `pq-erc20` scheme (docs/spec.md, section 7). A payment is valid
 ///      only with a signature by the payer's ML-DSA-87 key as `pqcKeyStatus` reports it, checked
 ///      with `pqcVerify`. Anyone may submit it; funds go only to the payee the payer signed.
 ///      Withdrawals need an ML-DSA-87 signature too and wait `WITHDRAWAL_DELAY`, so that a payment

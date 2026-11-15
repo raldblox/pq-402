@@ -14,7 +14,7 @@ default `large_client_header_buffers 4 8k` refuses a single header line over
 8 KB according to its documentation.
 
 Measured on 15 November 2026 with `encodePaymentSignatureHeader` from
-`@x402/core` 2.31.0, for a realistic `pq-escrow` payload with the sealing
+`@x402/core` 2.31.0, for a realistic `pq-erc20` payload with the sealing
 extension echoed:
 
 | Signature encoding inside the JSON | `PAYMENT-SIGNATURE` value |

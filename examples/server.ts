@@ -15,7 +15,7 @@ import {
   EvmChainReader,
   EvmSettler,
   MemoryChain,
-  PqEscrowFacilitator,
+  PqErc20Facilitator,
   qorechainTestnet,
   viemChainOf,
   type ChainReader,
@@ -82,7 +82,7 @@ export async function startServer(
   const gate = new PaymentGate({
     network: qorechainTestnet,
     escrow: backend.escrow,
-    facilitator: new PqEscrowFacilitator({
+    facilitator: new PqErc20Facilitator({
       networks: [qorechainTestnet.network],
       reader: backend.chain,
       settler: backend.settler,

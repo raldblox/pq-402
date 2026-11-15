@@ -149,7 +149,7 @@ describe("receipts", () => {
   const payerKey = mldsaKeyPair(new Uint8Array(32).fill(8));
   const gatewayAddress: Hex = "0x6666666666666666666666666666666666666666";
   const requirements = {
-    scheme: "pq-escrow",
+    scheme: "pq-erc20",
     network: "eip155:9800" as const,
     amount: "10000",
     asset: "0x97143B771D34ddb9130b807b135Ae675A5a963CA",
