@@ -78,3 +78,42 @@ a transaction's gas limit. For PQ-402 this means:
 - the relayer that calls `settle` needs a window scoped to the escrow.
 
 Source: <https://docs.qorechain.io/developer-guide/evm-window-reference>
+
+## Measured with PQ-402's own code (15–16 November 2026)
+
+`pnpm testnet precompiles` signs with the payer key from `.env` and asks the
+real `pqcVerify` through `eth_call` (free, no key registration needed):
+
+| Call | Result |
+|---|---|
+| a `pq-erc20` payment message signed by the client code | `true` |
+| the same with one bit of the signature flipped | `false` |
+| the same signature over the message with the amount changed | `false` |
+| the known-answer vector in `packages/core/test/vectors/v1.json` | `true` |
+
+So the exact bytes and signature form PQ-402 uses verify on chain. The
+Perennial spend message was not checked this way (it is checked against the
+vault's encoding in `contracts/test/Vectors.t.sol`).
+
+`pnpm testnet deploy` (dry run, `--skip-simulation`) passes the escrow's
+precompile checks through `vm.rpc("eth_call")` and simulates the deployment
+from a fresh, unfunded account.
+
+## Pitfalls
+
+- **Address case.** viem refuses `0x…0A01` / `0x…0A02` as a bad EIP-55
+  checksum (`InvalidAddressError`); write the precompile addresses in lower
+  case. Solidity refuses the same literals at compile time.
+- **Forge and `.env`.** `forge script --root contracts` run from the
+  repository root does not load the root `.env`; `pnpm testnet deploy` passes
+  the environment explicitly.
+
+## Agent authenticators
+
+Read on 16 November 2026 from the `@qorechain/sdk` 0.14.0 type declarations
+(`executeEvmMsg`, `linkAuthenticatorMsgs`): an owner links an ed25519 or
+secp256k1 key to an account with spending rules; the linked key signs and a
+relayer submits `MsgExecuteEVM` / `MsgExecuteCosmos` and pays the fee, with no
+EVM window. The linked key's classical signature is the authorisation; there
+is no ML-DSA co-signature. PQ-402 does not use them
+([decision 008](decisions/008-relayer-pays-gas.md)).
