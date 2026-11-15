@@ -32,7 +32,7 @@ Two things the plugin interfaces cannot do on their own:
   - `PqErc20Facilitator` (`SchemeNetworkFacilitator`) verifies and settles.
   All three are registered for the network `eip155:9800` (CAIP-2 of the
   QoreChain testnet's EVM chain id).
-- **Scheme name `pq-erc20`** (first named `pq-escrow`; renamed by [007](007-two-schemes.md)).** A new identifier, so a stock x402 client that
+- **Scheme name `pq-erc20`** (first named `pq-escrow`, renamed by [007](007-two-schemes.md)). A new identifier, so a stock x402 client that
   only knows `exact` skips the entry instead of building a payment it cannot
   sign. It still parses the whole `402`: the headers and JSON shapes are
   unchanged x402 v2.
