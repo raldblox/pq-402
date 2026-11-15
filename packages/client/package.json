@@ -1,0 +1,46 @@
+{
+  "name": "@pq-402/client",
+  "version": "0.1.0",
+  "description": "PQ-402 client: a fetch wrapper that answers 402 with an ML-DSA-87 signed payment, seals the request body with ML-KEM-1024, retries and opens the sealed response.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raldblox/pq-402.git",
+    "directory": "packages/client"
+  },
+  "keywords": [
+    "x402",
+    "post-quantum",
+    "fetch",
+    "ml-kem",
+    "qorechain",
+    "payments"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pq-402/core": "workspace:*",
+    "@pq-402/scheme-qorechain": "workspace:*",
+    "@x402/core": "2.31.0"
+  },
+  "devDependencies": {
+    "@pq-402/server": "workspace:*"
+  }
+}
