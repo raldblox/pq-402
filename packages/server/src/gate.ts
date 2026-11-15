@@ -2,13 +2,10 @@ import {
   ErrorCode,
   ORIGINAL_CONTENT_TYPE_HEADER,
   PROTOCOL_VERSION,
-  SCHEME_ERC20,
   SEALED_CONTENT_TYPE,
   SEALING_EXTENSION,
   openRequest,
-  parsePayload,
   parseSealingInfo,
-  paymentOf,
   requestHash,
   sealResponse,
   sealingDeclaration,
@@ -17,7 +14,13 @@ import {
   type SealKeyPair,
   type SealingInfo,
 } from "@pq-402/core";
-import { PqErc20ServerScheme, type QoreNetwork } from "@pq-402/scheme-qorechain";
+import {
+  PqErc20ServerScheme,
+  PqPerennialServerScheme,
+  describePayment,
+  type PriceParser,
+  type QoreNetwork,
+} from "@pq-402/scheme-qorechain";
 import {
   decodePaymentSignatureHeader,
   encodePaymentRequiredHeader,
@@ -61,7 +64,11 @@ export interface PaidRoute {
 
 export interface PaymentGateOptions {
   network: QoreNetwork;
-  escrow: Hex;
+  /** Offer `pq-erc20`: payments settled by this `PQ402Escrow`. */
+  escrow?: Hex;
+  /** Offer `pq-perennial`: payments made as `spend` actions of this Perennial v2 vault. */
+  vault?: Hex;
+  /** Must serve every scheme offered (an `x402Facilitator` with both registered, for example). */
   facilitator: Facilitator;
   /** Reads the payer's ML-KEM-1024 key from the KEM registry, to seal responses. */
   kemKeys: { kemKey(account: Hex): Promise<Uint8Array> };
@@ -119,12 +126,16 @@ const json = (value: unknown) => new TextEncoder().encode(JSON.stringify(value))
  * the handler, seal the response, settle, sign the receipt.
  */
 export class PaymentGate {
-  private readonly scheme: PqErc20ServerScheme;
+  private readonly schemes: PriceParser[] = [];
   private readonly nonces = new NonceCache();
   private readonly now: () => number;
 
   constructor(private readonly options: PaymentGateOptions) {
-    this.scheme = new PqErc20ServerScheme({ network: options.network, escrow: options.escrow });
+    const { network, escrow, vault } = options;
+    // Listed in order of preference: a Perennial spend first, the escrow second.
+    if (vault) this.schemes.push(new PqPerennialServerScheme({ network, vault }));
+    if (escrow) this.schemes.push(new PqErc20ServerScheme({ network, escrow }));
+    if (this.schemes.length === 0) throw new Error("PaymentGate needs an escrow, a vault, or both");
     this.now = options.now ?? (() => Math.floor(Date.now() / 1000));
   }
 
@@ -147,21 +158,26 @@ export class PaymentGate {
     };
   }
 
-  async requirementsFor(route: PaidRoute): Promise<PaymentRequirements> {
+  /** One `accepts` entry per scheme this gate offers, same price and payee. */
+  async requirementsFor(route: PaidRoute): Promise<PaymentRequirements[]> {
     const network = this.options.network.network;
-    const { asset, amount } = await this.scheme.parsePrice(route.price, network);
-    return this.scheme.enhancePaymentRequirements(
-      {
-        scheme: SCHEME_ERC20,
-        network,
-        asset,
-        amount,
-        payTo: route.payTo,
-        maxTimeoutSeconds: this.options.maxTimeoutSeconds ?? 120,
-        extra: {},
-      },
-      { x402Version: 2, scheme: SCHEME_ERC20, network },
-      [],
+    return Promise.all(
+      this.schemes.map(async (scheme) => {
+        const { asset, amount } = await scheme.parsePrice(route.price, network);
+        return scheme.enhancePaymentRequirements(
+          {
+            scheme: scheme.scheme,
+            network,
+            asset,
+            amount,
+            payTo: route.payTo,
+            maxTimeoutSeconds: this.options.maxTimeoutSeconds ?? 120,
+            extra: {},
+          },
+          { x402Version: 2, scheme: scheme.scheme, network },
+          [],
+        );
+      }),
     );
   }
 
@@ -178,7 +194,7 @@ export class PaymentGate {
       };
     }
 
-    const requirements = await this.requirementsFor(route);
+    const offered = await this.requirementsFor(route);
     const sealing = this.sealingInfo(route);
     const paymentRequired = (error: string): PaymentRequired => ({
       x402Version: 2,
@@ -188,7 +204,7 @@ export class PaymentGate {
         ...(route.description ? { description: route.description } : {}),
         ...(route.mimeType ? { mimeType: route.mimeType } : {}),
       },
-      accepts: [requirements],
+      accepts: offered,
       ...(sealing ? { extensions: { [SEALING_EXTENSION]: sealingDeclaration(sealing) } } : {}),
     });
     const refuse = (error: string): GateResponse => {
@@ -214,7 +230,9 @@ export class PaymentGate {
     } catch {
       return refuse(ErrorCode.InvalidPayload);
     }
-    const p = parsePayload(payload.payload);
+    const requirements = offered.find((r) => r.scheme === payload.accepted?.scheme);
+    if (!requirements) return refuse(ErrorCode.InvalidScheme);
+    const p = describePayment(requirements, payload.payload);
     if (!p) return refuse(ErrorCode.InvalidPayload);
 
     // The payment must commit to the bytes this server received.
@@ -226,8 +244,7 @@ export class PaymentGate {
       if (!echoed || JSON.stringify(echoed) !== JSON.stringify(sealing)) return refuse(ErrorCode.Sealing);
     }
 
-    if (!this.nonces.claim(p.payer, p.nonce, Number(p.validBefore), this.now()))
-      return refuse(ErrorCode.Replay);
+    if (!this.nonces.claim(p.replayKey, p.expiresAt, this.now())) return refuse(ErrorCode.Replay);
     let keepNonce = false;
     try {
       const verified = await this.options.facilitator.verify(payload, requirements);
@@ -319,7 +336,7 @@ export class PaymentGate {
       if (sealing && g) {
         const settledAt = typeof settled.extra?.settledAt === "number" ? settled.extra.settledAt : this.now();
         const receipt = signReceipt({
-          payment: paymentOf(requirements, p),
+          payment: p.receipt,
           gateway: g.address,
           secretKey: g.mldsaSecretKey,
           responseBody,
@@ -331,7 +348,7 @@ export class PaymentGate {
       headers["PAYMENT-RESPONSE"] = encodePaymentResponseHeader(response);
       return { status: out.status, headers, body: responseBody };
     } finally {
-      if (!keepNonce) this.nonces.release(p.payer, p.nonce);
+      if (!keepNonce) this.nonces.release(p.replayKey);
     }
   }
 }

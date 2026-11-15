@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { keccak256, type Hex } from "viem";
 import {
+  erc20ReceiptPayment,
   generateSealKeys,
   mldsaKeyPair,
   openRequest,
@@ -165,7 +166,7 @@ describe("receipts", () => {
     requestHash: rh,
     now: 1_763_200_000,
   });
-  const payment = paymentOf(requirements, payload);
+  const payment = erc20ReceiptPayment(paymentOf(requirements, payload));
   const responseBody = utf8("sealed response");
   const receipt = signReceipt({
     payment,

@@ -2,6 +2,45 @@ import { keccak256, type Hex } from "viem";
 import { fromBase64, isAddress, isHexOfLength, sameAddress, toBase64 } from "./bytes.js";
 import { receiptMessage, type Payment } from "./encoding.js";
 import { mldsaSign, mldsaVerify } from "./mldsa.js";
+import { perennialPaymentId, type PerennialSpend } from "./perennial.js";
+
+/** What a receipt says about the payment, whichever scheme carried it. */
+export interface ReceiptPayment {
+  chainId: bigint;
+  /** The escrow (`pq-erc20`) or the vault (`pq-perennial`). */
+  settlement: Hex;
+  payer: Hex;
+  payTo: Hex;
+  amount: bigint;
+  paymentId: Hex;
+  requestHash: Hex;
+}
+
+/** `pq-erc20`: the payment id is the payer's nonce. */
+export function erc20ReceiptPayment(p: Payment): ReceiptPayment {
+  return {
+    chainId: p.chainId,
+    settlement: p.escrow,
+    payer: p.payer,
+    payTo: p.payTo,
+    amount: p.amount,
+    paymentId: p.nonce,
+    requestHash: p.requestHash,
+  };
+}
+
+/** `pq-perennial`: the payment id is `keccak256(abi.encode(positionId, nonce))`; `ref` is the request hash. */
+export function perennialReceiptPayment(s: PerennialSpend, payer: Hex): ReceiptPayment {
+  return {
+    chainId: s.chainId,
+    settlement: s.vault,
+    payer,
+    payTo: s.to,
+    amount: s.amount,
+    paymentId: perennialPaymentId(s.positionId, s.nonce),
+    requestHash: s.ref,
+  };
+}
 
 /** `SettleResponse.extensions["pq402-sealing"].receipt` (docs/spec.md section 8.3). */
 export interface Receipt {
@@ -15,7 +54,7 @@ export interface Receipt {
 }
 
 export interface SignReceiptArgs {
-  payment: Payment;
+  payment: ReceiptPayment;
   gateway: Hex;
   /** The gateway's ML-DSA-87 secret key, matching the key registered on chain. */
   secretKey: Uint8Array;
@@ -25,15 +64,15 @@ export interface SignReceiptArgs {
   settledAt: number;
 }
 
-function messageOf(payment: Payment, r: Omit<Receipt, "signature">): Uint8Array {
+function messageOf(payment: ReceiptPayment, r: Omit<Receipt, "signature">): Uint8Array {
   return receiptMessage({
     chainId: payment.chainId,
-    escrow: payment.escrow,
+    settlement: payment.settlement,
     gateway: r.gateway,
     payer: payment.payer,
     payTo: payment.payTo,
     amount: payment.amount,
-    nonce: payment.nonce,
+    paymentId: payment.paymentId,
     requestHash: r.requestHash,
     responseHash: r.responseHash,
     transaction: r.transaction,
@@ -79,7 +118,7 @@ export function parseReceipt(value: unknown): Receipt | undefined {
 export interface VerifyReceiptArgs {
   receipt: Receipt;
   /** The payment the client signed. */
-  payment: Payment;
+  payment: ReceiptPayment;
   /** The gateway the client expected (from the `402`). */
   gateway: Hex;
   /** The gateway's ML-DSA-87 key, read from `pqcKeyStatus`. */

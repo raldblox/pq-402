@@ -1,4 +1,4 @@
-import type { Payment } from "@pq-402/core";
+import type { Payment, PerennialSpend } from "@pq-402/core";
 import type { Hex } from "viem";
 
 /** What `pqcKeyStatus(account)` reports. */
@@ -22,6 +22,20 @@ export interface ChainReader {
   escrowBalance(escrow: Hex, payer: Hex): Promise<bigint>;
   /** Timestamp of the latest block, in unix seconds. */
   now(): Promise<number>;
+  /** A Perennial position, for the `pq-perennial` scheme. */
+  perennialPosition?(vault: Hex, positionId: bigint): Promise<PerennialPosition>;
+}
+
+/** The parts of a Perennial v2 position the `pq-perennial` scheme checks. */
+export interface PerennialPosition {
+  beneficiary: Hex;
+  /** Action nonce; each signed action consumes one. */
+  nonce: bigint;
+  buffer: bigint;
+  /** Yield `spend` harvests into the buffer before paying. */
+  pendingYield: bigint;
+  closed: boolean;
+  succeeded: boolean;
 }
 
 export interface SettlementResult {
@@ -36,6 +50,11 @@ export interface Settler {
   readonly address: Hex;
   /** Send `settle(payment, signature)` to the escrow and wait until it is included. */
   settle(payment: Payment, signature: Uint8Array): Promise<SettlementResult>;
+  /**
+   * Send `spend(...)` to a Perennial vault, wait until it is included, and
+   * confirm the `Spent(positionId, to, amount, ref)` event. Needed for `pq-perennial`.
+   */
+  spend?(spend: PerennialSpend, signature: Uint8Array): Promise<SettlementResult>;
 }
 
 /** Thrown by chain adapters when the chain cannot answer or answers something malformed. */

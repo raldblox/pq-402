@@ -16,6 +16,7 @@ import {
   mldsaKeyPair,
   mldsaSign,
   paymentMessage,
+  perennialSpendMessage,
   receiptMessage,
   requestAad,
   requestHash,
@@ -60,18 +61,30 @@ const withdrawal = {
 
 const receipt = {
   chainId: 9800n,
-  escrow: payment.escrow,
+  settlement: payment.escrow,
   gateway: "0x6666666666666666666666666666666666666666" as Hex,
   payer: payment.payer,
   payTo: payment.payTo,
   amount: payment.amount,
-  nonce: payment.nonce,
+  paymentId: payment.nonce,
   requestHash: reqHash,
   responseHash: keccak256(utf8("sealed response bytes")),
   transaction: `0x${"77".repeat(32)}` as Hex,
   settledAt: 1_763_200_003n,
 };
 const recMsg = receiptMessage(receipt);
+
+const spend = {
+  chainId: 9800n,
+  vault: "0x8888888888888888888888888888888888888888" as Hex,
+  positionId: 7n,
+  nonce: 3n,
+  deadline: 1_763_200_120n,
+  to: payment.payTo,
+  amount: 2_000n,
+  ref: reqHash,
+};
+const spendMsg = perennialSpendMessage(spend);
 
 const sealKeys = sealKeysFromSeed(seed(3));
 const contentType = "application/json";
@@ -132,6 +145,18 @@ const vectors = {
     },
     message: toHex(recMsg),
     signature: toHex(mldsaSign(gateway.secretKey, recMsg)),
+  },
+  perennialSpend: {
+    fields: {
+      ...spend,
+      chainId: big(spend.chainId),
+      positionId: big(spend.positionId),
+      nonce: big(spend.nonce),
+      deadline: big(spend.deadline),
+      amount: big(spend.amount),
+    },
+    message: toHex(spendMsg),
+    signature: toHex(mldsaSign(payer.secretKey, spendMsg)),
   },
   sealedRequest: {
     chainId: "qorechain-diana",

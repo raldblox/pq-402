@@ -1,7 +1,8 @@
 import { fetchMlkemPublicKey } from "@qorechain/qoreseal/network";
-import { PQC_KEY_STATUS_ADDRESS, type Payment } from "@pq-402/core";
+import { PQC_KEY_STATUS_ADDRESS, type Payment, type PerennialSpend } from "@pq-402/core";
 import {
   createPublicClient,
+  parseEventLogs,
   hexToBytes,
   http,
   type Account,
@@ -11,8 +12,14 @@ import {
   type Transport,
   type WalletClient,
 } from "viem";
-import { pq402EscrowAbi, pqcPrecompileAbi } from "./abi.js";
-import { ChainUnavailableError, type ChainReader, type PqcKeyStatus, type Settler } from "./chain.js";
+import { perennialVaultAbi, pq402EscrowAbi, pqcPrecompileAbi } from "./abi.js";
+import {
+  ChainUnavailableError,
+  type ChainReader,
+  type PerennialPosition,
+  type PqcKeyStatus,
+  type Settler,
+} from "./chain.js";
 import type { QoreNetwork } from "./network.js";
 
 /** A viem chain definition for a QoreChain network's EVM lane. */
@@ -101,6 +108,33 @@ export class EvmChainReader implements ChainReader {
     );
   }
 
+  async perennialPosition(vault: Hex, positionId: bigint): Promise<PerennialPosition> {
+    const [pos, pendingYield] = await guarded("Perennial position", () =>
+      Promise.all([
+        this.client.readContract({
+          address: vault,
+          abi: perennialVaultAbi,
+          functionName: "position",
+          args: [positionId],
+        }),
+        this.client.readContract({
+          address: vault,
+          abi: perennialVaultAbi,
+          functionName: "pendingYield",
+          args: [positionId],
+        }),
+      ]),
+    );
+    return {
+      beneficiary: pos.beneficiary,
+      nonce: pos.nonce,
+      buffer: pos.buffer,
+      pendingYield,
+      closed: pos.closed,
+      succeeded: pos.succeeded,
+    };
+  }
+
   async now(): Promise<number> {
     const block = await guarded("latest block", () => this.client.getBlock({ blockTag: "latest" }));
     return Number(block.timestamp);
@@ -148,6 +182,31 @@ export class EvmSettler implements Settler {
     });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`settlement reverted in ${hash}`);
+    const block = await publicClient.getBlock({ blockHash: receipt.blockHash });
+    return { transaction: hash, settledAt: Number(block.timestamp) };
+  }
+
+  /** Relays `vault.spend(...)` and requires the matching `Spent` event in the receipt. */
+  async spend(s: PerennialSpend, signature: Uint8Array) {
+    const { publicClient, walletClient } = this.options;
+    const hash = await walletClient.writeContract({
+      address: s.vault,
+      abi: perennialVaultAbi,
+      functionName: "spend",
+      args: [s.positionId, s.to, s.amount, s.ref, s.deadline, `0x${Buffer.from(signature).toString("hex")}`],
+      gas: this.options.gas ?? 600_000n,
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== "success") throw new Error(`spend reverted in ${hash}`);
+    const spent = parseEventLogs({ abi: perennialVaultAbi, eventName: "Spent", logs: receipt.logs }).find(
+      (log) =>
+        log.address.toLowerCase() === s.vault.toLowerCase() &&
+        log.args.positionId === s.positionId &&
+        log.args.to.toLowerCase() === s.to.toLowerCase() &&
+        log.args.amount === s.amount &&
+        log.args.ref.toLowerCase() === s.ref.toLowerCase(),
+    );
+    if (!spent) throw new Error(`no matching Spent event in ${hash}`);
     const block = await publicClient.getBlock({ blockHash: receipt.blockHash });
     return { transaction: hash, settledAt: Number(block.timestamp) };
   }

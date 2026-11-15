@@ -26,12 +26,14 @@ export interface Withdrawal {
 
 export interface ReceiptFields {
   chainId: bigint;
-  escrow: Hex;
+  /** The contract that settled the payment: the escrow (`pq-erc20`) or the vault (`pq-perennial`). */
+  settlement: Hex;
   gateway: Hex;
   payer: Hex;
   payTo: Hex;
   amount: bigint;
-  nonce: Hex;
+  /** Identifies the payment within `settlement`; see {@link paymentIdOf}. */
+  paymentId: Hex;
   requestHash: Hex;
   responseHash: Hex;
   transaction: Hex;
@@ -161,12 +163,12 @@ export function receiptMessage(r: ReceiptFields): Uint8Array {
       [
         RECEIPT_DOMAIN,
         r.chainId,
-        addr(r.escrow),
+        addr(r.settlement),
         addr(r.gateway),
         addr(r.payer),
         addr(r.payTo),
         r.amount,
-        r.nonce,
+        r.paymentId,
         r.requestHash,
         r.responseHash,
         r.transaction,

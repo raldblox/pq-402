@@ -8,6 +8,7 @@ import {
   mldsaSign,
   mldsaVerify,
   paymentMessage,
+  perennialSpendMessage,
   receiptMessage,
   requestHash,
   toHex,
@@ -24,6 +25,7 @@ interface Vectors {
   payment: { fields: Record<string, string>; message: Hex; signature: Hex };
   withdrawal: { fields: Record<string, string>; message: Hex };
   receipt: { fields: Record<string, string>; message: Hex; signature: Hex };
+  perennialSpend: { fields: Record<string, string>; message: Hex; signature: Hex };
   sealedRequest: { chainId: string; contentType: string; entropy: Hex; envelope: Hex };
 }
 
@@ -91,12 +93,12 @@ describe("known-answer vectors (test/vectors/v1.json)", () => {
     const f = v.receipt.fields;
     const msg = receiptMessage({
       chainId: BigInt(f.chainId!),
-      escrow: f.escrow as Hex,
+      settlement: f.settlement as Hex,
       gateway: f.gateway as Hex,
       payer: f.payer as Hex,
       payTo: f.payTo as Hex,
       amount: BigInt(f.amount!),
-      nonce: f.nonce as Hex,
+      paymentId: f.paymentId as Hex,
       requestHash: f.requestHash as Hex,
       responseHash: f.responseHash as Hex,
       transaction: f.transaction as Hex,
@@ -105,6 +107,23 @@ describe("known-answer vectors (test/vectors/v1.json)", () => {
     expect(toHex(msg)).toBe(v.receipt.message);
     const gateway = mldsaKeyPair(fromHex(v.keys.gatewaySeed));
     expect(mldsaVerify(gateway.publicKey, msg, fromHex(v.receipt.signature))).toBe(true);
+  });
+
+  it("encodes the Perennial spend action message and verifies its signature", () => {
+    const f = v.perennialSpend.fields;
+    const msg = perennialSpendMessage({
+      chainId: BigInt(f.chainId!),
+      vault: f.vault as Hex,
+      positionId: BigInt(f.positionId!),
+      nonce: BigInt(f.nonce!),
+      deadline: BigInt(f.deadline!),
+      to: f.to as Hex,
+      amount: BigInt(f.amount!),
+      ref: f.ref as Hex,
+    });
+    expect(msg).toHaveLength(8 * 32);
+    expect(toHex(msg)).toBe(v.perennialSpend.message);
+    expect(mldsaVerify(payer.publicKey, msg, fromHex(v.perennialSpend.signature))).toBe(true);
   });
 
   it("reproduces the sealed request envelope and opens it", () => {

@@ -4,17 +4,27 @@ import {
   sameAddress,
   ML_DSA_87_ALGORITHM_ID,
   ML_DSA_87_PUBLIC_KEY_LENGTH,
+  perennialSpendMessage,
   type Payment,
+  type PerennialSpend,
 } from "@pq-402/core";
 import { keccak256, toHex, type Hex } from "viem";
-import { ChainUnavailableError, type ChainReader, type PqcKeyStatus, type Settler } from "./chain.js";
+import {
+  ChainUnavailableError,
+  type ChainReader,
+  type PerennialPosition,
+  type PqcKeyStatus,
+  type Settler,
+} from "./chain.js";
 
 const key = (a: string) => a.toLowerCase();
 
 /**
  * An in-memory stand-in for the chain: the `pqcKeyStatus` registry, the KEM
- * key registry and one `PQ402Escrow`, with real ML-DSA-87 verification.
- * `settle` repeats the checks of `PQ402Escrow.settle` in the same order.
+ * key registry, one `PQ402Escrow` and Perennial v2 positions, with real
+ * ML-DSA-87 verification. `settle` repeats the checks of `PQ402Escrow.settle`
+ * and `spend` those of `PerennialVault.spend` as the Perennial project
+ * specifies it, without its yield accounting (the buffer is set directly).
  * For tests and the local example only; it proves nothing about the chain.
  */
 export class MemoryChain implements ChainReader {
@@ -23,6 +33,7 @@ export class MemoryChain implements ChainReader {
   private readonly balances = new Map<string, bigint>();
   private readonly used = new Set<string>();
   private readonly paid = new Map<string, bigint>();
+  private readonly positions = new Map<string, PerennialPosition & { vault: Hex }>();
   private clock: number;
   private txCount = 0;
   /** When true, every read throws, as an unreachable node would. */
@@ -54,6 +65,19 @@ export class MemoryChain implements ChainReader {
 
   deposit(payer: Hex, amount: bigint) {
     this.balances.set(key(payer), (this.balances.get(key(payer)) ?? 0n) + amount);
+  }
+
+  /** Open a Perennial position whose buffer already holds `buffer`. */
+  openPosition(vault: Hex, positionId: bigint, beneficiary: Hex, buffer: bigint) {
+    this.positions.set(`${key(vault)}:${positionId}`, {
+      vault,
+      beneficiary,
+      nonce: 0n,
+      buffer,
+      pendingYield: 0n,
+      closed: false,
+      succeeded: false,
+    });
   }
 
   /** Total received by `payee` through settlements. */
@@ -103,12 +127,48 @@ export class MemoryChain implements ChainReader {
     return this.clock;
   }
 
-  /** A settler that submits to this in-memory escrow. */
+  async perennialPosition(vault: Hex, positionId: bigint): Promise<PerennialPosition> {
+    this.online();
+    const pos = this.positions.get(`${key(vault)}:${positionId}`);
+    if (!pos) throw new Error(`UnknownPosition(${positionId})`);
+    return {
+      beneficiary: pos.beneficiary,
+      nonce: pos.nonce,
+      buffer: pos.buffer,
+      pendingYield: pos.pendingYield,
+      closed: pos.closed,
+      succeeded: pos.succeeded,
+    };
+  }
+
+  /** A settler that submits to this in-memory escrow and vault. */
   settler(address: Hex): Settler {
     return {
       address,
       settle: async (p: Payment, signature: Uint8Array) => this.settle(p, signature),
+      spend: async (s: PerennialSpend, signature: Uint8Array) => this.spend(s, signature),
     };
+  }
+
+  private spend(s: PerennialSpend, signature: Uint8Array) {
+    this.online();
+    const pos = this.positions.get(`${key(s.vault)}:${s.positionId}`);
+    if (!pos) throw new Error("UnknownPosition");
+    if (pos.closed) throw new Error("PositionClosed");
+    if (pos.succeeded) throw new Error("PositionSucceeded");
+    if (s.amount === 0n) throw new Error("ZeroAmount");
+    if (BigInt(this.clock) > s.deadline) throw new Error("SignatureExpired");
+    const k = this.keys.get(key(pos.beneficiary));
+    if (!k?.registered || !k.possessionProven) throw new Error("PQCKeyNotProven");
+    const message = perennialSpendMessage({ ...s, nonce: pos.nonce });
+    if (!mldsaVerify(k.publicKey, message, signature)) throw new Error("PQCSignatureInvalid");
+    // A reverted transaction changes nothing, so check before touching state.
+    if (s.amount > pos.buffer) throw new Error("InsufficientBuffer");
+    pos.nonce += 1n;
+    pos.buffer -= s.amount;
+    this.paid.set(key(s.to), (this.paid.get(key(s.to)) ?? 0n) + s.amount);
+    this.txCount += 1;
+    return { transaction: keccak256(toHex(`memory-spend-${this.txCount}`)), settledAt: this.clock };
   }
 
   private settle(p: Payment, signature: Uint8Array) {

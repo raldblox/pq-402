@@ -5,4 +5,6 @@ export * from "./evm.js";
 export * from "./facilitator.js";
 export * from "./memory.js";
 export * from "./network.js";
+export * from "./payment.js";
+export * from "./perennial.js";
 export * from "./server.js";

@@ -62,4 +62,29 @@ contract VectorsTest is Test {
         );
         assertEq(expected, vm.parseJsonBytes32(json, ".request.requestHash"));
     }
+
+    /// @dev The encoding of `PerennialVault.actionMessage` (Perennial v2, `Action.Spend = 4`,
+    ///      `paramsHash = keccak256(abi.encode(to, amount, ref))`), written out here because the
+    ///      vault lives in its own repository. The `pq-perennial` client signs these bytes.
+    function test_perennialSpendMessageMatchesVector() public view {
+        string memory f = ".perennialSpend.fields";
+        bytes32 paramsHash = keccak256(
+            abi.encode(
+                vm.parseJsonAddress(json, string.concat(f, ".to")),
+                _uint(string.concat(f, ".amount")),
+                vm.parseJsonBytes32(json, string.concat(f, ".ref"))
+            )
+        );
+        bytes memory message = abi.encode(
+            keccak256("Perennial.Action.v1"),
+            _uint(string.concat(f, ".chainId")),
+            vm.parseJsonAddress(json, string.concat(f, ".vault")),
+            _uint(string.concat(f, ".positionId")),
+            uint8(4),
+            _uint(string.concat(f, ".nonce")),
+            _uint(string.concat(f, ".deadline")),
+            paramsHash
+        );
+        assertEq(message, vm.parseJsonBytes(json, ".perennialSpend.message"));
+    }
 }

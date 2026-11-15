@@ -18,22 +18,22 @@ export interface PqErc20ServerOptions {
 }
 
 /**
- * x402 `SchemeNetworkServer` for `pq-erc20`: turns a price into requirements
- * and adds the escrow address and protocol version to `extra`.
+ * Price handling shared by both PQ-402 server schemes: `$…` and `… fUSD`
+ * prices resolve to the network's default asset, in atomic units.
  */
-export class PqErc20ServerScheme implements SchemeNetworkServer {
-  readonly scheme = SCHEME_ERC20;
+export abstract class PriceParser implements SchemeNetworkServer {
+  abstract readonly scheme: string;
   readonly defaultAssetTransferMethod = "default";
   readonly paymentFlows = {
     default: { supported: ["authorization"] as const, default: "authorization" as const },
   };
 
-  constructor(private readonly options: PqErc20ServerOptions) {}
+  constructor(protected readonly qore: QoreNetwork) {}
 
   async parsePrice(price: Price, network: Network): Promise<AssetAmount> {
     this.requireNetwork(network);
     if (typeof price === "object") return price;
-    const asset = this.options.network.defaultAsset;
+    const asset = this.qore.defaultAsset;
     const { amount, symbol } = parseMoney(price);
     if (symbol !== undefined && symbol.toUpperCase() !== asset.symbol.toUpperCase()) {
       throw new Error(`cannot price in ${symbol} on ${network}; use ${asset.symbol}`);
@@ -43,25 +43,43 @@ export class PqErc20ServerScheme implements SchemeNetworkServer {
 
   getAssetDecimals(asset: string, network: Network): number | undefined {
     this.requireNetwork(network);
-    const known = this.options.network.defaultAsset;
+    const known = this.qore.defaultAsset;
     return sameAddress(asset, known.address) ? known.decimals : undefined;
+  }
+
+  abstract enhancePaymentRequirements(
+    requirements: PaymentRequirements,
+    supportedKind: SupportedKind,
+    facilitatorExtensions: string[],
+  ): Promise<PaymentRequirements>;
+
+  protected requireNetwork(network: Network): void {
+    if (network !== this.qore.network) {
+      throw new Error(`this scheme serves ${this.qore.network}, not ${network}`);
+    }
+  }
+}
+
+/**
+ * x402 `SchemeNetworkServer` for `pq-erc20`: turns a price into requirements
+ * and adds the escrow address and protocol version to `extra`.
+ */
+export class PqErc20ServerScheme extends PriceParser {
+  readonly scheme = SCHEME_ERC20;
+
+  constructor(private readonly options: PqErc20ServerOptions) {
+    super(options.network);
   }
 
   async enhancePaymentRequirements(
     requirements: PaymentRequirements,
-    _supportedKind: SupportedKind,
-    _facilitatorExtensions: string[],
+    _supportedKind?: SupportedKind,
+    _facilitatorExtensions?: string[],
   ): Promise<PaymentRequirements> {
     this.requireNetwork(requirements.network);
     return {
       ...requirements,
       extra: { ...requirements.extra, escrow: this.options.escrow, version: PROTOCOL_VERSION },
     };
-  }
-
-  private requireNetwork(network: Network): void {
-    if (network !== this.options.network.network) {
-      throw new Error(`this scheme serves ${this.options.network.network}, not ${network}`);
-    }
   }
 }

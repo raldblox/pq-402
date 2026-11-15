@@ -124,10 +124,10 @@ describe("PaymentGate", () => {
 describe("NonceCache", () => {
   it("holds a nonce until it expires, case-insensitively", () => {
     const c = new NonceCache();
-    expect(c.claim("0xAA", "0xBB", 100, 0)).toBe(true);
-    expect(c.claim("0xaa", "0xbb", 100, 50)).toBe(false);
-    expect(c.claim("0xaa", "0xbb", 200, 100)).toBe(true);
-    c.release("0xAA", "0xBB");
+    expect(c.claim("erc20:0xAA:0xBB", 100, 0)).toBe(true);
+    expect(c.claim("erc20:0xaa:0xbb", 100, 50)).toBe(false);
+    expect(c.claim("erc20:0xaa:0xbb", 200, 100)).toBe(true);
+    c.release("ERC20:0xAA:0xBB");
     expect(c.size).toBe(0);
   });
 });

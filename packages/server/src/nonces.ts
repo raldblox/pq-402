@@ -5,17 +5,17 @@
 export class NonceCache {
   private readonly entries = new Map<string, number>();
 
-  /** Reserve a nonce; false when it is already held. */
-  claim(payer: string, nonce: string, expiresAt: number, now: number): boolean {
+  /** Reserve a payment's replay key; false when it is already held. */
+  claim(key: string, expiresAt: number, now: number): boolean {
     this.prune(now);
-    const key = `${payer.toLowerCase()}:${nonce.toLowerCase()}`;
-    if (this.entries.has(key)) return false;
-    this.entries.set(key, expiresAt);
+    const k = key.toLowerCase();
+    if (this.entries.has(k)) return false;
+    this.entries.set(k, expiresAt);
     return true;
   }
 
-  release(payer: string, nonce: string): void {
-    this.entries.delete(`${payer.toLowerCase()}:${nonce.toLowerCase()}`);
+  release(key: string): void {
+    this.entries.delete(key.toLowerCase());
   }
 
   get size(): number {

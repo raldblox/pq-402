@@ -3,13 +3,12 @@ import {
   ML_DSA_87_PUBLIC_KEY_LENGTH,
   ORIGINAL_CONTENT_TYPE_HEADER,
   SCHEME_ERC20,
+  SCHEME_PERENNIAL,
   SEALED_CONTENT_TYPE,
   SEALING_EXTENSION,
   openResponse,
-  parsePayload,
   parseReceipt,
   parseSealingInfo,
-  paymentOf,
   receiptProblem,
   requestHash,
   requestTarget,
@@ -19,7 +18,13 @@ import {
   type SealKeyPair,
   type SealingInfo,
 } from "@pq-402/core";
-import { PqErc20ClientScheme, type PqcKeyStatus } from "@pq-402/scheme-qorechain";
+import {
+  PqErc20ClientScheme,
+  PqPerennialClientScheme,
+  describePayment,
+  type PerennialPosition,
+  type PqcKeyStatus,
+} from "@pq-402/scheme-qorechain";
 import { x402Client, x402HTTPClient } from "@x402/core/client";
 import type { PaymentPayload, PaymentRequired, PaymentRequirements, SettleResponse } from "@x402/core/types";
 
@@ -30,6 +35,8 @@ export const PROBE_HEADER = "PQ402-Probe";
 export interface KeyDirectory {
   keyStatus(account: Hex): Promise<PqcKeyStatus>;
   kemKey(account: Hex): Promise<Uint8Array>;
+  /** Needed to pay from a Perennial position: reads its current action nonce. */
+  perennialPosition?(vault: Hex, positionId: bigint): Promise<PerennialPosition>;
 }
 
 export interface Pq402FetchOptions {
@@ -43,6 +50,11 @@ export interface Pq402FetchOptions {
   chainId: string;
   /** Refuse to pay more than this, in atomic units of the asset. */
   maxAmount: bigint;
+  /**
+   * Pay from this Perennial position (the payer is its beneficiary) whenever
+   * the server offers `pq-perennial`; otherwise pay from the escrow (`pq-erc20`).
+   */
+  perennial?: { positionId: bigint };
   /** Seal request bodies whenever the server offers it. Default true. */
   sealRequests?: boolean;
   fetch?: typeof fetch;
@@ -94,11 +106,21 @@ async function bytesOf(res: Response): Promise<Uint8Array> {
  */
 export function createPq402Fetch(options: Pq402FetchOptions) {
   const doFetch = options.fetch ?? fetch;
-  const scheme = new PqErc20ClientScheme({
-    payer: options.payer,
-    secretKey: options.mldsaSecretKey,
-    ...(options.now ? { now: options.now } : {}),
-  });
+  const now = options.now ? { now: options.now } : {};
+  const erc20 = new PqErc20ClientScheme({ payer: options.payer, secretKey: options.mldsaSecretKey, ...now });
+  const readPosition = options.keys.perennialPosition?.bind(options.keys);
+  const perennial =
+    options.perennial && readPosition
+      ? new PqPerennialClientScheme({
+          payer: options.payer,
+          secretKey: options.mldsaSecretKey,
+          positionId: options.perennial.positionId,
+          nonceOf: async (vault, id) => (await readPosition(vault, id)).nonce,
+          ...now,
+        })
+      : undefined;
+  if (options.perennial && !perennial)
+    throw new Error("paying from a Perennial position needs keys.perennialPosition");
   const http = new x402HTTPClient(new x402Client());
 
   return async function pq402Fetch(input: string | URL, init: Init = {}): Promise<Pq402Response> {
@@ -127,8 +149,11 @@ export function createPq402Fetch(options: Pq402FetchOptions) {
       (name) => first.headers.get(name),
       await first.json().catch(() => undefined),
     );
-    const requirements = paymentRequired.accepts.find((a) => a.scheme === SCHEME_ERC20);
-    if (!requirements) throw new Pq402Error("the server offers no pq-erc20 payment");
+    const requirements =
+      (perennial && paymentRequired.accepts.find((a) => a.scheme === SCHEME_PERENNIAL)) ||
+      paymentRequired.accepts.find((a) => a.scheme === SCHEME_ERC20);
+    if (!requirements) throw new Pq402Error("the server offers no PQ-402 payment this client can make");
+    const scheme = requirements.scheme === SCHEME_PERENNIAL && perennial ? perennial : erc20;
     if (BigInt(requirements.amount) > options.maxAmount) {
       throw new Pq402Error(`price ${requirements.amount} exceeds the limit ${options.maxAmount}`);
     }
@@ -188,7 +213,7 @@ export function createPq402Fetch(options: Pq402FetchOptions) {
 
     const settlement = http.getPaymentSettleResponse((n) => paid.headers.get(n));
     if (!settlement.success) throw new Pq402Error("settlement failed", settlement.errorReason);
-    const signed = parsePayload(payload.payload);
+    const signed = describePayment(requirements, payload.payload);
     if (!signed) throw new Pq402Error("internal: payload did not round-trip");
     const outcome: PaymentOutcome = { requirements, payload, settlement, requestSealed: seal };
 
@@ -213,7 +238,7 @@ export function createPq402Fetch(options: Pq402FetchOptions) {
     }
     const problem = receiptProblem({
       receipt,
-      payment: paymentOf(requirements, signed),
+      payment: signed.receipt,
       gateway: sealing.gateway,
       gatewayKey: status.publicKey,
       responseBody: envelope,
