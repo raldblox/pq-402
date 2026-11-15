@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+contracts/lib
+contracts/out
+contracts/cache
+contracts/broadcast
+**/dist
+**/coverage
+packages/core/test/vectors/*.json
+**/*.md
