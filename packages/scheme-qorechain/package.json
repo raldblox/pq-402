@@ -1,0 +1,44 @@
+{
+  "name": "@pq-402/scheme-qorechain",
+  "version": "0.1.0",
+  "description": "The PQ-402 pq-escrow x402 scheme for QoreChain: client, resource server and facilitator plugins for @x402/core, and chain adapters.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raldblox/pq-402.git",
+    "directory": "packages/scheme-qorechain"
+  },
+  "keywords": [
+    "x402",
+    "post-quantum",
+    "ml-dsa",
+    "qorechain",
+    "payments",
+    "facilitator"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pq-402/core": "workspace:*",
+    "@qorechain/qoreseal": "0.1.0",
+    "@x402/core": "2.31.0",
+    "viem": "^2.40.0"
+  }
+}
