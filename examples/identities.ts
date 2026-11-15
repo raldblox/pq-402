@@ -42,6 +42,8 @@ export const demo = {
   gateway: demoParty("gateway", "0x00000000000000000000000000000000000000a1"),
   payer: demoParty("payer", "0x00000000000000000000000000000000000000b2"),
   escrow: "0x00000000000000000000000000000000000000e5" as Hex,
+  vault: "0x00000000000000000000000000000000000000f6" as Hex,
+  positionId: 1n,
 };
 
 /** A party from a BIP-39 phrase: EVM account m/44'/60'/0'/0/0, its ML-DSA-87 key, QoreSeal keys. */

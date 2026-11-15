@@ -59,6 +59,9 @@ importers:
       '@qorechain/sdk':
         specifier: 0.14.0
         version: 0.14.0(viem@2.57.20(typescript@5.9.3)(zod@4.6.7))
+      '@x402/core':
+        specifier: 2.31.0
+        version: 2.31.0
       viem:
         specifier: ^2.40.0
         version: 2.57.20(typescript@5.9.3)(zod@4.6.7)
