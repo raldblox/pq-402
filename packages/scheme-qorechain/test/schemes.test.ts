@@ -1,10 +1,11 @@
 import { x402Client } from "@x402/core/client";
 import type { PaymentRequired } from "@x402/core/types";
-import { createPublicClient, custom, type PublicClient } from "viem";
+import { createPublicClient, custom, encodeFunctionResult, toHex, type PublicClient } from "viem";
 import { describe, expect, it } from "vitest";
 import {
   ChainUnavailableError,
   EvmChainReader,
+  pqcPrecompileAbi,
   PqEscrowClientScheme,
   PqEscrowServerScheme,
   qorechainTestnet,
@@ -98,5 +99,33 @@ describe("EvmChainReader", () => {
       }) as typeof fetch,
     });
     await expect(reader.kemKey(PAYER)).rejects.toBeInstanceOf(ChainUnavailableError);
+  });
+
+  it("reads a well-formed pqcKeyStatus answer from the precompile address", async () => {
+    const calls: { to?: string }[] = [];
+    const node = createPublicClient({
+      chain: viemChainOf(qorechainTestnet),
+      transport: custom({
+        request: async ({ method, params }: { method: string; params?: unknown }) => {
+          if (method !== "eth_call") throw new Error(`unexpected ${method}`);
+          calls.push((params as [{ to?: string }])[0]);
+          return encodeFunctionResult({
+            abi: pqcPrecompileAbi,
+            functionName: "pqcKeyStatus",
+            result: [true, 1, toHex(payerKeys.publicKey), true],
+          });
+        },
+      }),
+    }) as PublicClient;
+    const status = await new EvmChainReader({ network: qorechainTestnet, publicClient: node }).keyStatus(
+      PAYER,
+    );
+    expect(status).toEqual({
+      registered: true,
+      algorithmId: 1,
+      publicKey: payerKeys.publicKey,
+      possessionProven: true,
+    });
+    expect(calls[0]?.to?.toLowerCase()).toBe("0x0000000000000000000000000000000000000a02");
   });
 });
