@@ -1,0 +1,44 @@
+{
+  "name": "@pq-402/core",
+  "version": "0.1.0",
+  "description": "PQ-402 core: canonical payment encoding, ML-DSA-87 signing and verification, ML-KEM-1024 sealing and receipts. No network access.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raldblox/pq-402.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "x402",
+    "post-quantum",
+    "ml-dsa",
+    "ml-kem",
+    "qorechain",
+    "payments"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@qorechain/pqc": "0.2.3",
+    "@qorechain/qoreseal": "0.1.0",
+    "@x402/core": "2.31.0",
+    "viem": "^2.40.0"
+  }
+}
