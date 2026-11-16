@@ -1,6 +1,6 @@
 {
   "name": "pq-402",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A post-quantum extension of the x402 HTTP payment protocol for QoreChain: ML-DSA-87 signed payments, ML-KEM-1024 sealed bodies.",
   "license": "MIT",

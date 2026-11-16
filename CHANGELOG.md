@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-16
+
+### Fixed
+
+- `pnpm build` failed on Linux and macOS: the shell expanded the unquoted
+  workspace filter.
+
 ## [0.1.0] - 2026-11-16
 
 ### Added
@@ -25,5 +32,6 @@ All notable changes to this project are documented here. The format follows
   testnet setup script.
 - Specification, decision records and threat model.
 
-[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/raldblox/pq-402/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/raldblox/pq-402/releases/tag/v0.1.0
