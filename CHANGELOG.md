@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-16
+
 ### Added
 
 - `pq-erc20` x402 scheme: ML-DSA-87 signed payments settled by
@@ -22,3 +24,6 @@ All notable changes to this project are documented here. The format follows
 - Examples: a paid endpoint, a client that pays per inference call, and a
   testnet setup script.
 - Specification, decision records and threat model.
+
+[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/raldblox/pq-402/releases/tag/v0.1.0
