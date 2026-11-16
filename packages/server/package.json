@@ -1,6 +1,6 @@
 {
   "name": "@pq402/server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "PQ-402 resource server: a framework-agnostic payment gate that answers 402, verifies ML-DSA-87 payments, settles them and seals responses with ML-KEM-1024, plus a node:http adapter.",
   "license": "MIT",
   "type": "module",

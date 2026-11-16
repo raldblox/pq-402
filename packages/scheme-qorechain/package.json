@@ -1,6 +1,6 @@
 {
   "name": "@pq402/scheme-qorechain",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The PQ-402 pq-erc20 x402 scheme for QoreChain: client, resource server and facilitator plugins for @x402/core, and chain adapters.",
   "license": "MIT",
   "type": "module",

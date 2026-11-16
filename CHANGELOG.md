@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-16
+
+### Changed
+
+- The packages are named `@pq402/core`,
+  `@pq402/scheme-qorechain`, `@pq402/server` and
+  `@pq402/client`, and are published to npm
+  ([decision 009](docs/decisions/009-npm-scope.md)).
+
+### Added
+
+- A README for each package.
+- `EvmSettler` options `maxFeePerGas` and `maxPriorityFeePerGas`; its default
+  gas limit is now 350,000 (settlement measured at about 253,000 gas).
+- The testnet deployment and its transactions in the README.
+
 ## [0.1.1] - 2026-11-16
 
 ### Fixed
@@ -32,6 +48,7 @@ All notable changes to this project are documented here. The format follows
   testnet setup script.
 - Specification, decision records and threat model.
 
-[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/raldblox/pq-402/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/raldblox/pq-402/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/raldblox/pq-402/releases/tag/v0.1.0
