@@ -11,7 +11,7 @@ import { evmChainIdOf } from "./payload.js";
  * position's beneficiary with ML-DSA-87 and relayed by the facilitator. The
  * signed bytes are the vault's `actionMessage` (docs/spec.md, section 5.3).
  */
-export const PERENNIAL_ACTION_DOMAIN = keccak256(stringToBytes("Perennial.Action.v1"));
+export const PERENNIAL_ACTION_DOMAIN = keccak256(stringToBytes("Perennial.Action"));
 /** `PerennialVault.Action.Spend`. */
 export const PERENNIAL_SPEND_ACTION = 4;
 
