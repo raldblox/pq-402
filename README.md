@@ -137,7 +137,7 @@ their interface, not their cryptography.
 | Message encoding, ML-DSA-87, ML-KEM-1024 sealing | unit tests, known-answer vectors, cross-checked in Solidity | the client's payment signature verified by the real `pqcVerify` (`eth_call`), and refused with a flipped bit or changed amount |
 | `PQ402Escrow` | 28 unit, 7 fuzz (512 runs), 4 invariant (8,192 calls) tests against the stand-in | deployed; deposit, two settlements, signed withdrawal and payout run (below) |
 | `pq-erc20` end to end | over real HTTP against the in-memory chain | run: two paid requests, one with a sealed body, settled on chain, receipts verified (below) |
-| `pq-perennial` end to end | over real HTTP against an in-memory model of the vault's `spend` | **not run**: needs a deployed Perennial vault |
+| `pq-perennial` end to end | over real HTTP against an in-memory model of the vault's `spend`, including budget mode | signing bytes match both deployed Perennial vaults (`eth_call`); **no spend settled yet** |
 | Header sizes | `PAYMENT-SIGNATURE` 9,396 B and `PAYMENT-RESPONSE` 9,052 B through Node's default 16 KiB limit | – |
 
 On the testnet the PQC precompiles and the KEM key registry exist today; they

@@ -19,7 +19,8 @@ event Spent(uint256 indexed positionId, address indexed to, uint256 amount,
 ```
 
 The signature is ML-DSA-87 by the beneficiary over the vault's
-`actionMessage(positionId, Action.Spend = 4, nonce, deadline, paramsHash)`,
+`actionMessage(positionId, Action.Spend = 4, nonce, deadline, paramsHash)`
+(domain tag `keccak256("Perennial.Action")`),
 with `paramsHash = keccak256(abi.encode(to, amount, ref))`. Anyone may relay
 it. The vault harvests first and reverts if the buffer cannot cover the
 amount.
@@ -54,7 +55,11 @@ extension and receipts:
   in succession; the payload's nonce is the position's current nonce; the
   deadline leaves the settlement margin; the beneficiary's key from
   `pqcKeyStatus` is registered, possession-proven ML-DSA-87; the signature
-  verifies over the action message; `buffer + pendingYield >= amount`.
+  verifies over the action message; the position can pay: `buffer +
+  pendingYield >= amount`, or, for a position in budget mode, `amount <=
+  budgetRemaining` and `buffer + pendingYield + principal >= amount`. When a
+  node is available it also asks the vault for its own `actionMessage` and
+  refuses if the bytes differ from the local encoding.
 - **Settlement** relays `vault.spend(...)` and requires a matching
   `Spent(positionId, to, amount, ref)` event in the receipt before calling the
   payment settled.
@@ -77,8 +82,15 @@ extension and receipts:
   so an agent that keeps paying keeps its position alive.
 - The worst a stolen agent key can do through `pq-perennial` is spend the
   unspent buffer; the principal is not reachable by `spend`.
+- **Budget mode.** A position opened in budget mode may also spend from its
+  principal, capped at `payoutAmount` per `payoutInterval`. A spend over the
+  cap fails with `invalid_pq402_budget_exceeded`, one the position cannot
+  cover with `insufficient_funds`; the client checks both before it signs.
 - The vault lives in the Perennial repository. PQ-402 carries a copy of the
   ABI fragment it uses (`packages/scheme-qorechain/src/abi.ts`), checks the
   message encoding against Perennial's source in a Solidity test, and tests
-  the scheme against an in-memory model of `spend`. It has not been run
-  against a deployed Perennial vault.
+  the scheme against an in-memory model of `spend`. On 17 November 2026 both
+  deployed vaults returned, through `eth_call`, the same `ACTION_DOMAIN` and
+  the same 256-byte `actionMessage` as the local encoding
+  (`pnpm testnet perennial-check <vault>`). No spend has been settled
+  against a deployed vault yet.

@@ -152,3 +152,16 @@ From the transactions listed in the README (`PQ402Escrow` at
   the cause is not established. Retrying the call worked.
 - A window that has run out of blocks reports "not usable" but still exists
   until it is closed.
+
+## The deployed Perennial vaults (17 November 2026)
+
+`pnpm testnet perennial-check <vault>` (free `eth_call`s) against the two
+vaults the Perennial project deployed on 16 November 2026:
+
+| Vault | `ACTION_DOMAIN` | `actionMessage` vs local encoding | `ASSET` |
+|---|---|---|---|
+| `0x76DAC5461fF361f911e5F39810c9455a6180C180` (no yield, budget mode) | `keccak256("Perennial.Action")`, equal | equal, 256 bytes | fUSD |
+| `0x496AAa4D585B97c8a26095D97Af4bBfAd473798c` (accelerated demo rate) | equal | equal, 256 bytes | fUSD |
+
+PQ-402 reads the vault address from configuration (`PERENNIAL_VAULT`), never
+from code.

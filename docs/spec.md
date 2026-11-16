@@ -113,7 +113,7 @@ The vault's `actionMessage` for `Action.Spend = 4`:
 
 ```
 abi.encode(
-  keccak256("Perennial.Action.v1"),
+  keccak256("Perennial.Action"),
   uint256 chainId, address vault, uint256 positionId, uint8 4,
   uint256 nonce, uint256 deadline,
   keccak256(abi.encode(address payTo, uint256 amount, bytes32 ref)))
@@ -162,8 +162,16 @@ data of the wrong length, MUST fail verification
 | 7 | the position is neither closed nor in succession | `invalid_pq402_payload` |
 | 8 | the payload's `nonce` is the position's current nonce | `invalid_pq402_nonce_used` |
 | 9 | `pqcKeyStatus(beneficiary)` as 6.1 #8 | `invalid_pq402_key` |
-| 10 | the signature verifies over 5.3 with that key | `invalid_pq402_signature` |
-| 11 | `buffer + pendingYield ≥ amount` | `insufficient_funds` |
+| 10 | where the node can be asked, the vault's `actionMessage` equals 5.3 | `invalid_pq402_chain_unavailable` |
+| 11 | the signature verifies over 5.3 with that key | `invalid_pq402_signature` |
+| 12 | budget mode only: `amount ≤ budgetRemaining` | `invalid_pq402_budget_exceeded` |
+| 13 | `amount ≤ buffer + pendingYield`, plus `principal` in budget mode | `insufficient_funds` |
+
+A position in **budget mode** (chosen when it is opened) may spend from its
+principal once the buffer is empty, but every spend counts against a budget
+of `payoutAmount` per `payoutInterval`; `budgetRemaining(positionId)` reports
+what is left. A client SHOULD read the position and refuse to sign a spend
+that check 12 or 13 would refuse, reporting the same code.
 
 ### 6.3 Resource server
 
