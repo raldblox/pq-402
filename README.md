@@ -135,8 +135,8 @@ their interface, not their cryptography.
 | Part | Tested | On the testnet |
 |---|---|---|
 | Message encoding, ML-DSA-87, ML-KEM-1024 sealing | unit tests, known-answer vectors, cross-checked in Solidity | the client's payment signature verified by the real `pqcVerify` (`eth_call`), and refused with a flipped bit or changed amount |
-| `PQ402Escrow` | 28 unit, 7 fuzz (512 runs), 4 invariant (8,192 calls) tests against the stand-in | deploy dry run only; **not deployed** |
-| `pq-erc20` end to end | over real HTTP against the in-memory chain | **not run**: needs funded accounts |
+| `PQ402Escrow` | 28 unit, 7 fuzz (512 runs), 4 invariant (8,192 calls) tests against the stand-in | deployed; deposit, two settlements, signed withdrawal and payout run (below) |
+| `pq-erc20` end to end | over real HTTP against the in-memory chain | run: two paid requests, one with a sealed body, settled on chain, receipts verified (below) |
 | `pq-perennial` end to end | over real HTTP against an in-memory model of the vault's `spend` | **not run**: needs a deployed Perennial vault |
 | Header sizes | `PAYMENT-SIGNATURE` 9,396 B and `PAYMENT-RESPONSE` 9,052 B through Node's default 16 KiB limit | – |
 
@@ -144,6 +144,40 @@ On the testnet the PQC precompiles and the KEM key registry exist today; they
 are not on QoreChain mainnet. Behind nginx, raise
 `large_client_header_buffers` (for example `4 16k`): its default 8 KB line
 limit is below the payment header ([decision 005](docs/decisions/005-header-size.md)).
+
+### Deployment
+
+QoreChain testnet (`qorechain-diana`, EVM chain id 9800), 16 November 2026.
+The explorer has no source verification; the build settings are in
+[`contracts/foundry.toml`](contracts/foundry.toml) (solc 0.8.28, optimizer
+on, 200 runs) and the runtime code is 6,283 bytes, as `forge build --sizes`
+reports.
+
+| | |
+|---|---|
+| `PQ402Escrow` | [`0xb7384fe171670fba5af74fc8f5aa99ef084025cd`](https://explore.qore.network/address/0xb7384fe171670fba5af74fc8f5aa99ef084025cd) |
+| Asset | fUSD `0x97143B771D34ddb9130b807b135Ae675A5a963CA` |
+| Withdrawal delay | 120 s (set short for this test deployment; the deploy script defaults to 3,600 s) |
+| Deployed in | [`0xd8ce83c612f9b2371211ff0c4cc1ad5caf2e3a37ad08309796315efb4d14cd8b`](https://explore.qore.network/tx/0xd8ce83c612f9b2371211ff0c4cc1ad5caf2e3a37ad08309796315efb4d14cd8b) |
+| Account | `0x825c2e0282c4681fad2f99F514d3D3003cd27432` (`qor1sfwzuq5zc35pltf0n863f57nqq7dyapj6gqlyg`), as deployer, gateway, relayer and payer at once, so every payment returned to it |
+
+What ran on it, with the transaction hashes:
+
+| Step | Transaction | Gas used |
+|---|---|---|
+| ML-KEM-1024 key registered (`MsgRegisterKEMKey`) | `D4E53C1B0164FC76656D07CB76611134E7EE0C8300CC6110961EAAB096DAD5EC` | native |
+| deploy | `0xd8ce83c612f9b2371211ff0c4cc1ad5caf2e3a37ad08309796315efb4d14cd8b` | 1,479,436 |
+| approve 0.05 fUSD (exact) | `0x2821cc46cff914621d722d05171be420e6f143c8cb087e985d55e2a692b44c9e` | 46,318 |
+| deposit 0.05 fUSD | `0xc43b4e3ffe7fd7265f4aee05d348a05aa41af0b8f3a6f407e61dc80d49986c66` | 83,910 |
+| `GET /paid/hello`, sealed response: `settle`, `Settled` event | `0xdfb1d269156caf98528120a59ba4ede7b7b4ef32c759652437d41a2dd66c4e0a` | 253,160 |
+| `POST /paid/echo`, sealed request and response: `settle`, `Settled` event | `0xb7f9fd66e96619492f8d2dc439d91a73fc6313dab11bbca04af3d1656c7c6a02` | 253,388 |
+| `requestWithdrawal` (ML-DSA-87 signed) | `0x97948aa83c180ee208411bab9ab5a629850160417c12469f9cc711ce2f8f2647` | 271,183 |
+| `withdraw` 0.03 fUSD, `Withdrawn` event | `0x3e92bc071ebeddd7776406e3e9f3a906a90ece1bec95de7211b8479a665b4707` | 65,000 |
+
+Each EVM step ran in its own EVM window, scoped to the escrow (and fUSD for
+the approval) and closed afterwards; the deployment used a one-transaction
+window, because a scoped window refuses contract creation. `pq-perennial`
+has not run on the testnet.
 
 ### Running it on the testnet
 

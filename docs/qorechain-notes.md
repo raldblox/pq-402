@@ -117,3 +117,38 @@ relayer submits `MsgExecuteEVM` / `MsgExecuteCosmos` and pays the fee, with no
 EVM window. The linked key's classical signature is the authorisation; there
 is no ML-DSA co-signature. PQ-402 does not use them
 ([decision 008](decisions/008-relayer-pays-gas.md)).
+
+## Measured on the testnet run (16 November 2026)
+
+From the transactions listed in the README (`PQ402Escrow` at
+`0xb7384fe171670fba5af74fc8f5aa99ef084025cd`):
+
+| Call | Gas used |
+|---|---|
+| deploy `PQ402Escrow` (`eth_estimateGas` said 1,479,436) | 1,479,436 |
+| `approve` fUSD | 46,318 |
+| `deposit` | 83,910 |
+| `settle` (one `pqcKeyStatus`, one `pqcVerify` of a 4627-byte signature) | 253,160 and 253,388 |
+| `requestWithdrawal` (also one `pqcVerify`) | 271,183 |
+| `withdraw` | 65,000 |
+
+- The effective gas price was 112.5 gwei; the base fee read 100 gwei.
+- **Window budget includes the fee cap.** A window's value limit is charged
+  `gas limit × maxFeePerGas` per transaction. With viem's default cap
+  (255 gwei, twice the base fee plus tip) a 450,000-gas `settle` reserved
+  about 0.115 QOR, and a window sized at 150 gwei refused the following
+  transaction with "Missing or invalid parameters" from
+  `eth_sendRawTransaction`. Set the fee cap explicitly and size the window
+  from the same number.
+- **Scoped windows refuse contract creation** (documented on
+  `allowedTargets` in `@qorechain/sdk` 0.14.0); a deployment needs its own
+  window.
+- Native transactions sent by the scripts cost a fixed 0.1 QOR fee each
+  (800,000 gas, 100,000 uqor). The whole run cost 1.3535 QOR, most of it in
+  window open and close messages.
+- Twice, a request made right after a long wait (a settlement, then the
+  120-second withdrawal delay) failed with a bare `fetch failed` from Node's
+  `fetch`. It did not reproduce with a 6-second simulated settlement locally;
+  the cause is not established. Retrying the call worked.
+- A window that has run out of blocks reports "not usable" but still exists
+  until it is closed.
