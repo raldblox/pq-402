@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-17
+
+### Changed
+
+- `pq-perennial` signs the final Perennial vault's `actionMessage`, whose
+  domain tag is `keccak256("Perennial.Action")`. Spends signed by 0.1.x are
+  refused by the deployed vaults.
+- `PqPerennialClientScheme` takes `positionOf` (the whole position) instead of
+  `nonceOf`, and refuses to sign a spend the position cannot pay.
+- The relayer simulates `settle` and `spend` before sending them, so a
+  refused payment costs no gas and reports the contract's reason.
+
+### Added
+
+- Budget mode for `pq-perennial`: a spend over the period's budget fails with
+  `invalid_pq402_budget_exceeded`; one the position cannot cover with
+  `insufficient_funds`. `Pq402Error` messages explain each code.
+- The facilitator compares the vault's own `actionMessage` with the local
+  encoding whenever it can read the chain, and refuses on a mismatch.
+- `pnpm testnet perennial-check <vault>`: checks a deployed vault's signing
+  bytes against PQ-402's with free `eth_call`s.
+
 ## [0.1.2] - 2026-11-16
 
 ### Changed
@@ -48,7 +70,8 @@ All notable changes to this project are documented here. The format follows
   testnet setup script.
 - Specification, decision records and threat model.
 
-[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/raldblox/pq-402/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/raldblox/pq-402/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/raldblox/pq-402/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/raldblox/pq-402/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 {
   "name": "@pq402/examples",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "private": true,
   "description": "A paid PQ-402 endpoint, a client that pays it, and the testnet setup script.",
   "license": "MIT",
