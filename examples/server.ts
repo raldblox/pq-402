@@ -111,7 +111,13 @@ export async function testnetBackend(): Promise<Backend> {
   const walletClient = createWalletClient({ account: gateway.evm!, chain, transport: http() });
   return {
     chain: new EvmChainReader({ network: qorechainTestnet, publicClient }),
-    settler: new EvmSettler({ publicClient, walletClient }),
+    // Fee cap as testnet.ts sizes its windows (250 gwei a transaction), so settlements fit.
+    settler: new EvmSettler({
+      publicClient,
+      walletClient,
+      maxFeePerGas: 250_000_000_000n,
+      maxPriorityFeePerGas: 1_000_000_000n,
+    }),
     gateway,
     escrow: requireEnv("ESCROW_ADDRESS") as Hex,
     ...(process.env.PERENNIAL_VAULT?.trim() ? { vault: process.env.PERENNIAL_VAULT.trim() as Hex } : {}),

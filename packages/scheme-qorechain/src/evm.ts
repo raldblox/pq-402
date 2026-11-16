@@ -145,10 +145,18 @@ export interface EvmSettlerOptions {
   publicClient: PublicClient;
   walletClient: WalletClient<Transport, Chain, Account>;
   /**
-   * Gas limit for `settle`. The EVM lane bills at least half the limit, so keep
-   * it near the measured cost. Default 600,000.
+   * Gas limit for `settle` and `spend`. The EVM lane bills at least half the
+   * limit, so keep it near the measured cost: `settle` used 253,160 and
+   * 253,388 gas on the testnet (16 November 2026). Default 350,000.
    */
   gas?: bigint;
+  /**
+   * Fee caps. Each transaction reserves `gas × maxFeePerGas` of the relayer's
+   * EVM window, so leaving them to the wallet's defaults (2 × base fee) can
+   * exhaust a window sized for a lower cap. Default: the wallet's choice.
+   */
+  maxFeePerGas?: bigint;
+  maxPriorityFeePerGas?: bigint;
 }
 
 /** Sends `settle` from a wallet that holds an open EVM window scoped to the escrow. */
@@ -157,6 +165,15 @@ export class EvmSettler implements Settler {
 
   constructor(private readonly options: EvmSettlerOptions) {
     this.address = options.walletClient.account.address;
+  }
+
+  private fees() {
+    const { gas, maxFeePerGas, maxPriorityFeePerGas } = this.options;
+    return {
+      gas: gas ?? 350_000n,
+      ...(maxFeePerGas !== undefined ? { maxFeePerGas } : {}),
+      ...(maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas } : {}),
+    };
   }
 
   async settle(payment: Payment, signature: Uint8Array) {
@@ -178,7 +195,7 @@ export class EvmSettler implements Settler {
       abi: pq402EscrowAbi,
       functionName: "settle",
       args,
-      gas: this.options.gas ?? 600_000n,
+      ...this.fees(),
     });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`settlement reverted in ${hash}`);
@@ -194,7 +211,7 @@ export class EvmSettler implements Settler {
       abi: perennialVaultAbi,
       functionName: "spend",
       args: [s.positionId, s.to, s.amount, s.ref, s.deadline, `0x${Buffer.from(signature).toString("hex")}`],
-      gas: this.options.gas ?? 600_000n,
+      ...this.fees(),
     });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`spend reverted in ${hash}`);
