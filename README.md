@@ -61,7 +61,7 @@ Two ways to pay, on the same wire format ([decision 007](docs/decisions/007-two-
 
 | Scheme | Paid from | Settled by |
 |---|---|---|
-| `pq-perennial` | a Perennial v2 position's buffer of yield | the vault's `spend`, signed by the position's beneficiary |
+| `pq-perennial` | a Perennial position's buffer of yield | the vault's `spend`, signed by the position's beneficiary |
 | `pq-erc20` | the payer's fUSD deposit in `PQ402Escrow` | `PQ402Escrow.settle`, which checks the signature with `pqcVerify` |
 
 Everything else is standard x402 v2: the same headers and JSON objects, so a
@@ -137,7 +137,7 @@ their interface, not their cryptography.
 | Message encoding, ML-DSA-87, ML-KEM-1024 sealing | unit tests, known-answer vectors, cross-checked in Solidity | the client's payment signature verified by the real `pqcVerify` (`eth_call`), and refused with a flipped bit or changed amount |
 | `PQ402Escrow` | 28 unit, 7 fuzz (512 runs), 4 invariant (8,192 calls) tests against the stand-in | deploy dry run only; **not deployed** |
 | `pq-erc20` end to end | over real HTTP against the in-memory chain | **not run**: needs funded accounts |
-| `pq-perennial` end to end | over real HTTP against an in-memory model of the vault's `spend` | **not run**: needs a deployed Perennial v2 vault |
+| `pq-perennial` end to end | over real HTTP against an in-memory model of the vault's `spend` | **not run**: needs a deployed Perennial vault |
 | Header sizes | `PAYMENT-SIGNATURE` 9,396 B and `PAYMENT-RESPONSE` 9,052 B through Node's default 16 KiB limit | – |
 
 On the testnet the PQC precompiles and the KEM key registry exist today; they

@@ -26,7 +26,7 @@ export const pq402EscrowAbi = parseAbi([
 ]);
 
 /**
- * The parts of the Perennial v2 vault the `pq-perennial` scheme uses. The
+ * The parts of the Perennial vault the `pq-perennial` scheme uses. The
  * `spend` signature, the `Spent` event and `Action.Spend = 4` are fixed by the
  * Perennial project; this fragment is copied from its compiled ABI.
  */

@@ -26,7 +26,7 @@ export interface ChainReader {
   perennialPosition?(vault: Hex, positionId: bigint): Promise<PerennialPosition>;
 }
 
-/** The parts of a Perennial v2 position the `pq-perennial` scheme checks. */
+/** The parts of a Perennial position the `pq-perennial` scheme checks. */
 export interface PerennialPosition {
   beneficiary: Hex;
   /** Action nonce; each signed action consumes one. */

@@ -11,7 +11,7 @@ All notable changes to this project are documented here. The format follows
 - `pq-erc20` x402 scheme: ML-DSA-87 signed payments settled by
   `PQ402Escrow`, which verifies them with QoreChain's `pqcVerify` and
   `pqcKeyStatus` precompiles and fails closed when they are inactive.
-- `pq-perennial` x402 scheme: payments made as Perennial v2 vault `spend`
+- `pq-perennial` x402 scheme: payments made as Perennial vault `spend`
   actions, relayed by the facilitator and confirmed by the `Spent` event.
 - `pq402-sealing` extension: request and response bodies sealed with
   ML-KEM-1024 (QoreSeal) to keys from the KEM key registry, and receipts

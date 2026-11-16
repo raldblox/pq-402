@@ -63,7 +63,7 @@ contract VectorsTest is Test {
         assertEq(expected, vm.parseJsonBytes32(json, ".request.requestHash"));
     }
 
-    /// @dev The encoding of `PerennialVault.actionMessage` (Perennial v2, `Action.Spend = 4`,
+    /// @dev The encoding of `PerennialVault.actionMessage` (Perennial vault, `Action.Spend = 4`,
     ///      `paramsHash = keccak256(abi.encode(to, amount, ref))`), written out here because the
     ///      vault lives in its own repository. The `pq-perennial` client signs these bytes.
     function test_perennialSpendMessageMatchesVector() public view {

@@ -12,7 +12,7 @@ PQ-402 is two x402 v2 payment schemes and one extension:
   signature by the key registered for its account on QoreChain; the
   `PQ402Escrow` contract checks it with the chain's PQC precompiles and pays
   from the payer's escrowed balance.
-- **`pq-perennial`**: the payment is a Perennial v2 vault `spend` action,
+- **`pq-perennial`**: the payment is a Perennial vault `spend` action,
   ML-DSA-87 signed by the position's beneficiary; the vault checks it and pays
   from the position's buffer of harvested yield.
 - **`pq402-sealing`**: request and response bodies are sealed with
@@ -39,7 +39,7 @@ Common fields as in x402. Scheme-specific `extra`:
 | Scheme | `extra` |
 |---|---|
 | `pq-erc20` | `{ "escrow": "0x…", "version": "1" }`: the `PQ402Escrow` for `asset` |
-| `pq-perennial` | `{ "vault": "0x…", "version": "1" }`: the Perennial v2 vault; `asset` is its asset |
+| `pq-perennial` | `{ "vault": "0x…", "version": "1" }`: the Perennial vault; `asset` is its asset |
 
 A client MUST NOT pay an entry with a `version` it does not implement.
 Addresses are `0x`-prefixed hex and compared case-insensitively. A server MAY

@@ -34,7 +34,7 @@ import { PriceParser } from "./server.js";
 
 export interface PqPerennialServerOptions {
   network: QoreNetwork;
-  /** The Perennial v2 vault whose positions pay. Its asset must be the network's default asset. */
+  /** The Perennial vault whose positions pay. Its asset must be the network's default asset. */
   vault: Hex;
 }
 

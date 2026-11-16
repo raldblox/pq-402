@@ -66,7 +66,7 @@ export interface PaymentGateOptions {
   network: QoreNetwork;
   /** Offer `pq-erc20`: payments settled by this `PQ402Escrow`. */
   escrow?: Hex;
-  /** Offer `pq-perennial`: payments made as `spend` actions of this Perennial v2 vault. */
+  /** Offer `pq-perennial`: payments made as `spend` actions of this Perennial vault. */
   vault?: Hex;
   /** Must serve every scheme offered (an `x402Facilitator` with both registered, for example). */
   facilitator: Facilitator;

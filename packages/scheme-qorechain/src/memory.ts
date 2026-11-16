@@ -21,7 +21,7 @@ const key = (a: string) => a.toLowerCase();
 
 /**
  * An in-memory stand-in for the chain: the `pqcKeyStatus` registry, the KEM
- * key registry, one `PQ402Escrow` and Perennial v2 positions, with real
+ * key registry, one `PQ402Escrow` and Perennial vault positions, with real
  * ML-DSA-87 verification. `settle` repeats the checks of `PQ402Escrow.settle`
  * and `spend` those of `PerennialVault.spend` as the Perennial project
  * specifies it, without its yield accounting (the buffer is set directly).

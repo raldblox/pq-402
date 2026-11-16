@@ -6,9 +6,9 @@
 ## Context
 
 The first use case is an agent that pays for each inference call out of the
-yield of a deposit it can never spend. That deposit lives in a Perennial v2
+yield of a deposit it can never spend. That deposit lives in a Perennial
 vault, whose positions have a beneficiary (the agent's account and ML-DSA-87
-key) and a buffer of harvested yield. Perennial v2 exposes one signed action
+key) and a buffer of harvested yield. The Perennial vault exposes one signed action
 for this, with a fixed signature:
 
 ```solidity
@@ -81,4 +81,4 @@ extension and receipts:
   ABI fragment it uses (`packages/scheme-qorechain/src/abi.ts`), checks the
   message encoding against Perennial's source in a Solidity test, and tests
   the scheme against an in-memory model of `spend`. It has not been run
-  against a deployed v2 vault.
+  against a deployed Perennial vault.
