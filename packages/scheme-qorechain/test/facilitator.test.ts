@@ -1,4 +1,4 @@
-import { mldsaKeyPair, toBase64, fromBase64, ErrorCode } from "@pq-402/core";
+import { mldsaKeyPair, toBase64, fromBase64, ErrorCode } from "@pq402/core";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { describe, expect, it } from "vitest";
 import { PqErc20ClientScheme, PqErc20Facilitator } from "../src/index.js";

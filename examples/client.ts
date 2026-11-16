@@ -6,8 +6,8 @@
  *
  * Start the server first (examples/server.ts) in the same mode.
  */
-import { createPq402Fetch, type KeyDirectory } from "@pq-402/client";
-import { MemoryChain, EvmChainReader, qorechainTestnet } from "@pq-402/scheme-qorechain";
+import { createPq402Fetch, type KeyDirectory } from "@pq402/client";
+import { MemoryChain, EvmChainReader, qorechainTestnet } from "@pq402/scheme-qorechain";
 import type { Hex } from "viem";
 import { demo, testnetParties, type Party } from "./identities.js";
 import { PORT } from "./server.js";

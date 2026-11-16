@@ -1,4 +1,4 @@
-import { PROTOCOL_VERSION, SCHEME_ERC20, sameAddress } from "@pq-402/core";
+import { PROTOCOL_VERSION, SCHEME_ERC20, sameAddress } from "@pq402/core";
 import type {
   AssetAmount,
   Network,

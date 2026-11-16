@@ -1,7 +1,7 @@
 /**
  * Regenerates the known-answer vectors in this folder.
  *
- *   pnpm --filter @pq-402/core exec tsx test/vectors/generate.ts
+ *   pnpm --filter @pq402/core exec tsx test/vectors/generate.ts
  *
  * Every input is fixed, so the output is identical on every run. The vectors
  * pin the exact bytes of the signed messages, the ML-DSA-87 signature (signing

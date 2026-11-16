@@ -1,5 +1,5 @@
 {
-  "name": "@pq-402/examples",
+  "name": "@pq402/examples",
   "version": "0.1.1",
   "private": true,
   "description": "A paid PQ-402 endpoint, a client that pays it, and the testnet setup script.",
@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@cosmjs/stargate": "^0.39.0",
-    "@pq-402/client": "workspace:*",
-    "@pq-402/core": "workspace:*",
-    "@pq-402/scheme-qorechain": "workspace:*",
-    "@pq-402/server": "workspace:*",
+    "@pq402/client": "workspace:*",
+    "@pq402/core": "workspace:*",
+    "@pq402/scheme-qorechain": "workspace:*",
+    "@pq402/server": "workspace:*",
     "@qorechain/evm": "0.14.0",
     "@qorechain/qoreseal": "0.1.0",
     "@qorechain/sdk": "0.14.0",

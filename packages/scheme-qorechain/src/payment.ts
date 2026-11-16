@@ -9,7 +9,7 @@ import {
   perennialSpendOf,
   type Hex,
   type ReceiptPayment,
-} from "@pq-402/core";
+} from "@pq402/core";
 import type { PaymentRequirements } from "@x402/core/types";
 
 /** What the HTTP layer needs to know about a payment, whichever PQ-402 scheme carries it. */

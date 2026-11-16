@@ -1,4 +1,4 @@
-import { createPayload, parseExtra, SCHEME_ERC20 } from "@pq-402/core";
+import { createPayload, parseExtra, SCHEME_ERC20 } from "@pq402/core";
 import type { PaymentPayloadResult, PaymentRequirements, SchemeNetworkClient } from "@x402/core/types";
 import type { Hex } from "viem";
 
@@ -15,7 +15,7 @@ export interface PqErc20ClientOptions {
  * x402 `SchemeNetworkClient` for `pq-erc20`. A payment commits to one HTTP
  * request, which the scheme interface cannot see, so the instance registered
  * with an `x402Client` must be bound to the request first with
- * {@link PqErc20ClientScheme.forRequest}. `@pq-402/client` does this per call.
+ * {@link PqErc20ClientScheme.forRequest}. `@pq402/client` does this per call.
  */
 export class PqErc20ClientScheme implements SchemeNetworkClient {
   readonly scheme = SCHEME_ERC20;

@@ -1,13 +1,13 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { generateSealKeys, mldsaKeyPair, type Hex } from "@pq-402/core";
+import { generateSealKeys, mldsaKeyPair, type Hex } from "@pq402/core";
 import {
   MemoryChain,
   PqErc20Facilitator,
   PqPerennialFacilitator,
   qorechainTestnet,
-} from "@pq-402/scheme-qorechain";
-import { nodeListener, PaymentGate } from "@pq-402/server";
+} from "@pq402/scheme-qorechain";
+import { nodeListener, PaymentGate } from "@pq402/server";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { afterEach, describe, expect, it } from "vitest";
 import { createPq402Fetch } from "../src/index.js";

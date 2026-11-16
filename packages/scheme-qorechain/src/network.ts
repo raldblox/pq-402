@@ -1,4 +1,4 @@
-import { QORECHAIN_TESTNET, TESTNET_FUSD } from "@pq-402/core";
+import { QORECHAIN_TESTNET, TESTNET_FUSD } from "@pq402/core";
 import type { Hex } from "viem";
 
 /** Everything PQ-402 needs to know about one QoreChain network. */

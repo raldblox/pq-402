@@ -1,4 +1,4 @@
-import { mldsaKeyPair, requestHash, type Hex } from "@pq-402/core";
+import { mldsaKeyPair, requestHash, type Hex } from "@pq402/core";
 import type { PaymentRequirements } from "@x402/core/types";
 import { MemoryChain, PqErc20ClientScheme, PqErc20Facilitator } from "../src/index.js";
 

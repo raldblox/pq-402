@@ -17,14 +17,14 @@ import {
   type Receipt,
   type SealKeyPair,
   type SealingInfo,
-} from "@pq-402/core";
+} from "@pq402/core";
 import {
   PqErc20ClientScheme,
   PqPerennialClientScheme,
   describePayment,
   type PerennialPosition,
   type PqcKeyStatus,
-} from "@pq-402/scheme-qorechain";
+} from "@pq402/scheme-qorechain";
 import { x402Client, x402HTTPClient } from "@x402/core/client";
 import type { PaymentPayload, PaymentRequired, PaymentRequirements, SettleResponse } from "@x402/core/types";
 

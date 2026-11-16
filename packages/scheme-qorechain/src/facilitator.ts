@@ -11,7 +11,7 @@ import {
   ML_DSA_87_PUBLIC_KEY_LENGTH,
   SCHEME_ERC20,
   type Payment,
-} from "@pq-402/core";
+} from "@pq402/core";
 import type {
   Network,
   PaymentPayload,

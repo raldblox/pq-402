@@ -97,8 +97,8 @@ stand-in model that only reports how many characters it received.
 ## Use it
 
 ```ts
-import { createPq402Fetch } from "@pq-402/client";
-import { EvmChainReader, qorechainTestnet } from "@pq-402/scheme-qorechain";
+import { createPq402Fetch } from "@pq402/client";
+import { EvmChainReader, qorechainTestnet } from "@pq402/scheme-qorechain";
 
 const pay = createPq402Fetch({
   payer, mldsaSecretKey, sealKeys,               // the agent's account and keys
@@ -110,7 +110,7 @@ const pay = createPq402Fetch({
 const res = await pay("https://api.example/v1/chat/completions", { method: "POST", body });
 ```
 
-On the server, `PaymentGate` from `@pq-402/server` takes the routes and their
+On the server, `PaymentGate` from `@pq402/server` takes the routes and their
 prices, an x402 facilitator (`x402Facilitator` from `@x402/core` with
 `PqPerennialFacilitator` and `PqErc20Facilitator` registered) and the
 gateway's keys; `nodeListener` mounts it on `node:http`. See
@@ -118,10 +118,10 @@ gateway's keys; `nodeListener` mounts it on `node:http`. See
 
 | Package | What it holds |
 |---|---|
-| [`@pq-402/core`](packages/core) | message encoding, ML-DSA-87 signing, ML-KEM-1024 sealing, receipts; no network |
-| [`@pq-402/scheme-qorechain`](packages/scheme-qorechain) | the x402 client, server and facilitator plugins for both schemes; chain adapters |
-| [`@pq-402/server`](packages/server) | the payment gate and a `node:http` adapter |
-| [`@pq-402/client`](packages/client) | the paying `fetch` |
+| [`@pq402/core`](packages/core) | message encoding, ML-DSA-87 signing, ML-KEM-1024 sealing, receipts; no network |
+| [`@pq402/scheme-qorechain`](packages/scheme-qorechain) | the x402 client, server and facilitator plugins for both schemes; chain adapters |
+| [`@pq402/server`](packages/server) | the payment gate and a `node:http` adapter |
+| [`@pq402/client`](packages/client) | the paying `fetch` |
 | [`contracts/`](contracts) | `PQ402Escrow` (Foundry) |
 
 Nothing is published to npm yet.

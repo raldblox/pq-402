@@ -21,7 +21,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { StargateClient } from "@cosmjs/stargate";
-import { fromHex, mldsaSign, paymentMessage, requestHash, toHex, utf8, type Hex } from "@pq-402/core";
+import { fromHex, mldsaSign, paymentMessage, requestHash, toHex, utf8, type Hex } from "@pq402/core";
 import {
   EvmChainReader,
   erc20Abi,
@@ -29,7 +29,7 @@ import {
   pqcPrecompileAbi,
   qorechainTestnet,
   viemChainOf,
-} from "@pq-402/scheme-qorechain";
+} from "@pq402/scheme-qorechain";
 import { evmWindowCost, evmWindowStatus } from "@qorechain/evm";
 import { fetchMlkemPublicKey } from "@qorechain/qoreseal/network";
 import {
@@ -170,7 +170,7 @@ async function precompiles(): Promise<void> {
   console.log(`pqcVerify(amount changed to 10001, same signature):  ${await verify(signature, other)}`);
   const vectors = await import("../packages/core/test/vectors/v1.json", { with: { type: "json" } });
   const v = vectors.default as { payment: { message: Hex; signature: Hex }; keys: { payerSeed: Hex } };
-  const { mldsaKeyPair } = await import("@pq-402/core");
+  const { mldsaKeyPair } = await import("@pq402/core");
   const vk = mldsaKeyPair(fromHex(v.keys.payerSeed));
   const kat = await reader.readContract({
     address: "0x0000000000000000000000000000000000000a01",

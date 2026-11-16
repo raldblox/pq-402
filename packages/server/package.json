@@ -1,5 +1,5 @@
 {
-  "name": "@pq-402/server",
+  "name": "@pq402/server",
   "version": "0.1.1",
   "description": "PQ-402 resource server: a framework-agnostic payment gate that answers 402, verifies ML-DSA-87 payments, settles them and seals responses with ML-KEM-1024, plus a node:http adapter.",
   "license": "MIT",
@@ -36,8 +36,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pq-402/core": "workspace:*",
-    "@pq-402/scheme-qorechain": "workspace:*",
+    "@pq402/core": "workspace:*",
+    "@pq402/scheme-qorechain": "workspace:*",
     "@x402/core": "2.31.0",
     "viem": "^2.40.0"
   }

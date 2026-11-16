@@ -6,7 +6,7 @@ import {
   perennialSpendOf,
   toBase64,
   type Hex,
-} from "@pq-402/core";
+} from "@pq402/core";
 import type { PaymentRequirements } from "@x402/core/types";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { describe, expect, it } from "vitest";
@@ -158,7 +158,7 @@ describe("pq-perennial", () => {
     const pp = await payload(client);
     const p = pp.payload as { signature: string };
     const message = perennialSpendMessage(perennialSpendOf(requirements, pp.payload as never));
-    const { mldsaVerify } = await import("@pq-402/core");
+    const { mldsaVerify } = await import("@pq402/core");
     expect(mldsaVerify(agentKeys.publicKey, message, fromBase64(p.signature))).toBe(true);
   });
 

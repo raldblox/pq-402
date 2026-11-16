@@ -16,9 +16,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "example:server": "pnpm --filter @pq-402/examples run server",
-    "example:client": "pnpm --filter @pq-402/examples run client",
-    "testnet": "pnpm --filter @pq-402/examples run testnet",
+    "example:server": "pnpm --filter @pq402/examples run server",
+    "example:client": "pnpm --filter @pq402/examples run client",
+    "testnet": "pnpm --filter @pq402/examples run testnet",
     "contracts:build": "forge build --root contracts",
     "contracts:test": "forge test --root contracts",
     "contracts:fmt:check": "forge fmt --root contracts --check"

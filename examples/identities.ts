@@ -9,7 +9,7 @@
  * inside the in-memory chain of the examples; they are not secrets and must
  * never hold anything.
  */
-import { mldsaKeyPair, sealKeysFromSeed, type Hex, type MlDsaKeyPair, type SealKeyPair } from "@pq-402/core";
+import { mldsaKeyPair, sealKeysFromSeed, type Hex, type MlDsaKeyPair, type SealKeyPair } from "@pq402/core";
 import { deriveSealKeys } from "@qorechain/qoreseal";
 import { deriveUnifiedAccount, evmToQor } from "@qorechain/sdk";
 import { sha256 } from "viem";

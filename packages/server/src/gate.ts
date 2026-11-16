@@ -13,14 +13,14 @@ import {
   type Hex,
   type SealKeyPair,
   type SealingInfo,
-} from "@pq-402/core";
+} from "@pq402/core";
 import {
   PqErc20ServerScheme,
   PqPerennialServerScheme,
   describePayment,
   type PriceParser,
   type QoreNetwork,
-} from "@pq-402/scheme-qorechain";
+} from "@pq402/scheme-qorechain";
 import {
   decodePaymentSignatureHeader,
   encodePaymentRequiredHeader,

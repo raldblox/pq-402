@@ -13,7 +13,7 @@ import {
   ML_DSA_87_ALGORITHM_ID,
   ML_DSA_87_PUBLIC_KEY_LENGTH,
   type PerennialSpend,
-} from "@pq-402/core";
+} from "@pq402/core";
 import type {
   Network,
   PaymentPayload,

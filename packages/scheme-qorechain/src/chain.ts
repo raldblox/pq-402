@@ -1,4 +1,4 @@
-import type { Payment, PerennialSpend } from "@pq-402/core";
+import type { Payment, PerennialSpend } from "@pq402/core";
 import type { Hex } from "viem";
 
 /** What `pqcKeyStatus(account)` reports. */

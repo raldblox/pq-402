@@ -1,5 +1,5 @@
 import { fetchMlkemPublicKey } from "@qorechain/qoreseal/network";
-import { PQC_KEY_STATUS_ADDRESS, type Payment, type PerennialSpend } from "@pq-402/core";
+import { PQC_KEY_STATUS_ADDRESS, type Payment, type PerennialSpend } from "@pq402/core";
 import {
   createPublicClient,
   parseEventLogs,

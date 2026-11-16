@@ -1,5 +1,5 @@
 {
-  "name": "@pq-402/core",
+  "name": "@pq402/core",
   "version": "0.1.1",
   "description": "PQ-402 core: canonical payment encoding, ML-DSA-87 signing and verification, ML-KEM-1024 sealing and receipts. No network access.",
   "license": "MIT",

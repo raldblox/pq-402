@@ -7,10 +7,10 @@ export default defineConfig({
   resolve: {
     // Tests run against the sources of the workspace packages, not their build output.
     alias: {
-      "@pq-402/core": src("core"),
-      "@pq-402/scheme-qorechain": src("scheme-qorechain"),
-      "@pq-402/server": src("server"),
-      "@pq-402/client": src("client"),
+      "@pq402/core": src("core"),
+      "@pq402/scheme-qorechain": src("scheme-qorechain"),
+      "@pq402/server": src("server"),
+      "@pq402/client": src("client"),
     },
   },
   test: {

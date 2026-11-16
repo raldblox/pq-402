@@ -35,21 +35,21 @@ importers:
 
   examples:
     dependencies:
+      '@pq402/client':
+        specifier: workspace:*
+        version: link:../packages/client
+      '@pq402/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@pq402/scheme-qorechain':
+        specifier: workspace:*
+        version: link:../packages/scheme-qorechain
+      '@pq402/server':
+        specifier: workspace:*
+        version: link:../packages/server
       '@cosmjs/stargate':
         specifier: ^0.39.0
         version: 0.39.0
-      '@pq-402/client':
-        specifier: workspace:*
-        version: link:../packages/client
-      '@pq-402/core':
-        specifier: workspace:*
-        version: link:../packages/core
-      '@pq-402/scheme-qorechain':
-        specifier: workspace:*
-        version: link:../packages/scheme-qorechain
-      '@pq-402/server':
-        specifier: workspace:*
-        version: link:../packages/server
       '@qorechain/evm':
         specifier: 0.14.0
         version: 0.14.0(viem@2.57.20(typescript@5.9.3)(zod@4.6.7))
@@ -68,17 +68,17 @@ importers:
 
   packages/client:
     dependencies:
-      '@pq-402/core':
+      '@pq402/core':
         specifier: workspace:*
         version: link:../core
-      '@pq-402/scheme-qorechain':
+      '@pq402/scheme-qorechain':
         specifier: workspace:*
         version: link:../scheme-qorechain
       '@x402/core':
         specifier: 2.31.0
         version: 2.31.0
     devDependencies:
-      '@pq-402/server':
+      '@pq402/server':
         specifier: workspace:*
         version: link:../server
 
@@ -99,7 +99,7 @@ importers:
 
   packages/scheme-qorechain:
     dependencies:
-      '@pq-402/core':
+      '@pq402/core':
         specifier: workspace:*
         version: link:../core
       '@qorechain/qoreseal':
@@ -114,10 +114,10 @@ importers:
 
   packages/server:
     dependencies:
-      '@pq-402/core':
+      '@pq402/core':
         specifier: workspace:*
         version: link:../core
-      '@pq-402/scheme-qorechain':
+      '@pq402/scheme-qorechain':
         specifier: workspace:*
         version: link:../scheme-qorechain
       '@x402/core':

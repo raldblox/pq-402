@@ -1,5 +1,5 @@
 {
-  "name": "@pq-402/scheme-qorechain",
+  "name": "@pq402/scheme-qorechain",
   "version": "0.1.1",
   "description": "The PQ-402 pq-erc20 x402 scheme for QoreChain: client, resource server and facilitator plugins for @x402/core, and chain adapters.",
   "license": "MIT",
@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pq-402/core": "workspace:*",
+    "@pq402/core": "workspace:*",
     "@qorechain/qoreseal": "0.1.0",
     "@x402/core": "2.31.0",
     "viem": "^2.40.0"

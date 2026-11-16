@@ -7,7 +7,7 @@ import {
   perennialSpendMessage,
   type Payment,
   type PerennialSpend,
-} from "@pq-402/core";
+} from "@pq402/core";
 import { keccak256, toHex, type Hex } from "viem";
 import {
   ChainUnavailableError,

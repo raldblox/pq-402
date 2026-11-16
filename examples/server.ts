@@ -26,8 +26,8 @@ import {
   viemChainOf,
   type ChainReader,
   type Settler,
-} from "@pq-402/scheme-qorechain";
-import { nodeListener, PaymentGate, type Handler } from "@pq-402/server";
+} from "@pq402/scheme-qorechain";
+import { nodeListener, PaymentGate, type Handler } from "@pq402/server";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { createPublicClient, createWalletClient, http, type Hex, type PublicClient } from "viem";
 import { demo, requireEnv, testnetParties, type Party } from "./identities.js";
