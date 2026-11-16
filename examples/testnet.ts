@@ -5,6 +5,9 @@
  *   pnpm testnet status               balances, keys, windows, escrow deposit
  *   pnpm testnet precompiles          free eth_calls: real ML-DSA-87 PQ-402 signatures against pqcVerify
  *   pnpm testnet deploy [--broadcast] deploy PQ402Escrow from the gateway account (dry run by default)
+ *   pnpm testnet perennial-check <vault> [positionId]
+ *                                     free eth_calls: the vault's ACTION_DOMAIN and actionMessage
+ *                                     against PQ-402's own encoding; a position's budget fields
  *   pnpm testnet register <who>       register <who>'s ML-DSA-87 key with proof of possession
  *   pnpm testnet register-kem <who>   register <who>'s ML-KEM-1024 key (hybrid-signed)
  *   pnpm testnet window <who>         open an EVM window scoped to the escrow (and fUSD for the payer);
@@ -25,6 +28,7 @@ import { fromHex, mldsaSign, paymentMessage, requestHash, toHex, utf8, type Hex 
 import {
   EvmChainReader,
   erc20Abi,
+  perennialVaultAbi,
   pq402EscrowAbi,
   pqcPrecompileAbi,
   qorechainTestnet,
@@ -210,6 +214,48 @@ async function deploy(flag?: string): Promise<void> {
     console.log("Dry run only. Add --broadcast to deploy, then set ESCROW_ADDRESS in .env.");
 }
 
+/** Compares a live Perennial vault's signing bytes with PQ-402's local encoding. No transaction. */
+async function perennialCheck(vaultArg?: string): Promise<void> {
+  const vault = (vaultArg ?? process.env.PERENNIAL_VAULT?.trim()) as Hex | undefined;
+  if (!vault || !/^0x[0-9a-fA-F]{40}$/.test(vault))
+    throw new Error("usage: pnpm testnet perennial-check <vault> [positionId]");
+  const { PERENNIAL_ACTION_DOMAIN, perennialSpendMessage } = await import("@pq402/core");
+  const domain = await reader.readContract({
+    address: vault,
+    abi: perennialVaultAbi,
+    functionName: "ACTION_DOMAIN",
+  });
+  console.log(
+    `ACTION_DOMAIN ${domain} ${domain === PERENNIAL_ACTION_DOMAIN ? "== local" : "!= local " + PERENNIAL_ACTION_DOMAIN}`,
+  );
+  const asset = await reader.readContract({ address: vault, abi: perennialVaultAbi, functionName: "ASSET" });
+  console.log(`ASSET ${asset}`);
+  const spend = {
+    chainId: 9800n,
+    vault,
+    positionId: 7n,
+    nonce: 3n,
+    deadline: 1_763_200_120n,
+    to: "0x3333333333333333333333333333333333333333" as Hex,
+    amount: 2_000n,
+    ref: requestHash({ method: "POST", target: "/v1/chat/completions", body: utf8("{}") }),
+  };
+  const evm = new EvmChainReader({ network: qorechainTestnet, publicClient: reader });
+  const theirs = toHex(await evm.perennialSpendMessage(spend));
+  const ours = toHex(perennialSpendMessage(spend));
+  console.log(
+    `actionMessage(7, Spend, 3, ${spend.deadline}, paramsHash) ${theirs === ours ? "== local encoding" : "!= local encoding"} (${(theirs.length - 2) / 2} bytes)`,
+  );
+  const id = process.argv[4];
+  if (id) {
+    const pos = await evm.perennialPosition(vault, BigInt(id));
+    console.log(
+      `position ${id}: beneficiary ${pos.beneficiary}, nonce ${pos.nonce}, buffer ${pos.buffer}, pendingYield ${pos.pendingYield}, budgetMode ${pos.budgetMode}, budgetRemaining ${pos.budgetRemaining}, principal ${pos.principal}`,
+    );
+  }
+  if (theirs !== ours || domain !== PERENNIAL_ACTION_DOMAIN) process.exitCode = 1;
+}
+
 async function nativeAccount(party: Party) {
   return deriveUnifiedAccount(party.mnemonic!, 0);
 }
@@ -350,6 +396,7 @@ const commands: Record<string, (arg?: string) => Promise<void>> = {
   keys,
   status,
   precompiles,
+  "perennial-check": perennialCheck,
   deploy,
   register,
   "register-kem": registerKem,
