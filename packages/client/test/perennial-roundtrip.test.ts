@@ -28,14 +28,14 @@ afterEach(async () => {
   await Promise.all(servers.splice(0).map((s) => new Promise((r) => s.close(r))));
 });
 
-async function start(buffer: bigint) {
+async function start(buffer: bigint, budget?: { perPeriod: bigint; principal: bigint }) {
   const chain = new MemoryChain(ESCROW);
   chain.registerKey(AGENT, agentMldsa.publicKey);
   chain.registerKemKey(AGENT, agentSeal.mlkemPublicKey);
   chain.registerKey(GATEWAY, gatewayMldsa.publicKey);
   chain.registerKemKey(GATEWAY, gatewaySeal.mlkemPublicKey);
   chain.deposit(AGENT, 1_000_000n);
-  chain.openPosition(VAULT, 1n, AGENT, buffer);
+  chain.openPosition(VAULT, 1n, AGENT, buffer, budget);
   const settler = chain.settler(RELAYER);
   const facilitator = new x402Facilitator()
     .register("eip155:9800", new PqErc20Facilitator({ networks: ["eip155:9800"], reader: chain, settler }))
@@ -119,5 +119,18 @@ describe("an agent paying per inference call from a Perennial position", () => {
     expect(res.payment?.requirements.scheme).toBe("pq-erc20");
     expect(await chain.escrowBalance(ESCROW, AGENT)).toBe(998_000n);
     expect((await chain.perennialPosition(VAULT, 1n)).buffer).toBe(5_000n);
+  });
+
+  it("stops with a plain reason when a budget-mode position has used its budget", async () => {
+    const { chain, url } = await start(0n, { perPeriod: 2_000n, principal: 50_000n });
+    const pay = agentFetch(chain, true);
+    const first = await pay(url, { method: "POST", body: "call 1" });
+    expect(first.status).toBe(200);
+    expect((await chain.perennialPosition(VAULT, 1n)).principal).toBe(48_000n);
+
+    const err = await pay(url, { method: "POST", body: "call 2" }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ name: "Pq402Error", reason: "invalid_pq402_budget_exceeded" });
+    expect((err as Error).message).toMatch(/spending budget for the current period is used up/);
+    expect(chain.paidTo(GATEWAY)).toBe(2_000n);
   });
 });

@@ -24,6 +24,11 @@ export interface ChainReader {
   now(): Promise<number>;
   /** A Perennial position, for the `pq-perennial` scheme. */
   perennialPosition?(vault: Hex, positionId: bigint): Promise<PerennialPosition>;
+  /**
+   * The vault's own `actionMessage(positionId, Spend, nonce, deadline, paramsHash)`.
+   * When available the facilitator requires it to equal the locally encoded bytes.
+   */
+  perennialSpendMessage?(spend: PerennialSpend): Promise<Uint8Array>;
 }
 
 /** The parts of a Perennial position the `pq-perennial` scheme checks. */
@@ -36,6 +41,22 @@ export interface PerennialPosition {
   pendingYield: bigint;
   closed: boolean;
   succeeded: boolean;
+  /**
+   * Budget mode (fixed when the position is opened): every spend counts against a
+   * per-period budget (`budgetRemaining`), and is paid from the buffer, then the principal.
+   */
+  budgetMode: boolean;
+  principal: bigint;
+  /** What a budget-mode position may still spend this period; zero otherwise. */
+  budgetRemaining: bigint;
+}
+
+/** Why a position cannot pay `amount` now, as an error code; `undefined` when it can. */
+export function perennialShortfall(pos: PerennialPosition, amount: bigint): "budget" | "funds" | undefined {
+  const spendable = pos.buffer + pos.pendingYield + (pos.budgetMode ? pos.principal : 0n);
+  if (pos.budgetMode && amount > pos.budgetRemaining) return "budget";
+  if (amount > spendable) return "funds";
+  return undefined;
 }
 
 export interface SettlementResult {

@@ -1,5 +1,11 @@
 import { fetchMlkemPublicKey } from "@qorechain/qoreseal/network";
-import { PQC_KEY_STATUS_ADDRESS, type Payment, type PerennialSpend } from "@pq402/core";
+import {
+  PERENNIAL_SPEND_ACTION,
+  PQC_KEY_STATUS_ADDRESS,
+  perennialSpendParamsHash,
+  type Payment,
+  type PerennialSpend,
+} from "@pq402/core";
 import {
   createPublicClient,
   parseEventLogs,
@@ -109,20 +115,12 @@ export class EvmChainReader implements ChainReader {
   }
 
   async perennialPosition(vault: Hex, positionId: bigint): Promise<PerennialPosition> {
-    const [pos, pendingYield] = await guarded("Perennial position", () =>
+    const at = { address: vault, abi: perennialVaultAbi, args: [positionId] } as const;
+    const [pos, pendingYield, budgetRemaining] = await guarded("Perennial position", () =>
       Promise.all([
-        this.client.readContract({
-          address: vault,
-          abi: perennialVaultAbi,
-          functionName: "position",
-          args: [positionId],
-        }),
-        this.client.readContract({
-          address: vault,
-          abi: perennialVaultAbi,
-          functionName: "pendingYield",
-          args: [positionId],
-        }),
+        this.client.readContract({ ...at, functionName: "position" }),
+        this.client.readContract({ ...at, functionName: "pendingYield" }),
+        this.client.readContract({ ...at, functionName: "budgetRemaining" }),
       ]),
     );
     return {
@@ -132,7 +130,28 @@ export class EvmChainReader implements ChainReader {
       pendingYield,
       closed: pos.closed,
       succeeded: pos.succeeded,
+      budgetMode: pos.budgetMode,
+      principal: pos.principal,
+      budgetRemaining,
     };
+  }
+
+  async perennialSpendMessage(s: PerennialSpend): Promise<Uint8Array> {
+    const message = await guarded("Perennial actionMessage", () =>
+      this.client.readContract({
+        address: s.vault,
+        abi: perennialVaultAbi,
+        functionName: "actionMessage",
+        args: [
+          s.positionId,
+          PERENNIAL_SPEND_ACTION,
+          s.nonce,
+          s.deadline,
+          perennialSpendParamsHash(s.to, s.amount, s.ref),
+        ],
+      }),
+    );
+    return hexToBytes(message);
   }
 
   async now(): Promise<number> {
@@ -190,13 +209,10 @@ export class EvmSettler implements Settler {
       },
       `0x${Buffer.from(signature).toString("hex")}`,
     ] as const;
-    const hash = await walletClient.writeContract({
-      address: payment.escrow,
-      abi: pq402EscrowAbi,
-      functionName: "settle",
-      args,
-      ...this.fees(),
-    });
+    const call = { address: payment.escrow, abi: pq402EscrowAbi, functionName: "settle", args } as const;
+    // Simulate first: a payment the contract would refuse costs nothing and reports why.
+    await publicClient.simulateContract({ ...call, account: walletClient.account });
+    const hash = await walletClient.writeContract({ ...call, ...this.fees() });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`settlement reverted in ${hash}`);
     const block = await publicClient.getBlock({ blockHash: receipt.blockHash });
@@ -206,13 +222,16 @@ export class EvmSettler implements Settler {
   /** Relays `vault.spend(...)` and requires the matching `Spent` event in the receipt. */
   async spend(s: PerennialSpend, signature: Uint8Array) {
     const { publicClient, walletClient } = this.options;
-    const hash = await walletClient.writeContract({
+    const call = {
       address: s.vault,
       abi: perennialVaultAbi,
       functionName: "spend",
       args: [s.positionId, s.to, s.amount, s.ref, s.deadline, `0x${Buffer.from(signature).toString("hex")}`],
-      ...this.fees(),
-    });
+    } as const;
+    // Simulate first: a spend the vault would refuse (BudgetExceeded, InsufficientBuffer)
+    // costs nothing and its revert reason reaches the facilitator.
+    await publicClient.simulateContract({ ...call, account: walletClient.account });
+    const hash = await walletClient.writeContract({ ...call, ...this.fees() });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`spend reverted in ${hash}`);
     const spent = parseEventLogs({ abi: perennialVaultAbi, eventName: "Spent", logs: receipt.logs }).find(

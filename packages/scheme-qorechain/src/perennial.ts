@@ -10,6 +10,8 @@ import {
   perennialSpendMessage,
   perennialSpendOf,
   sameAddress,
+  toHex,
+  Pq402Error,
   ML_DSA_87_ALGORITHM_ID,
   ML_DSA_87_PUBLIC_KEY_LENGTH,
   type PerennialSpend,
@@ -26,7 +28,7 @@ import type {
   VerifyResponse,
 } from "@x402/core/types";
 import type { Hex } from "viem";
-import type { ChainReader, Settler } from "./chain.js";
+import { perennialShortfall, type ChainReader, type PerennialPosition, type Settler } from "./chain.js";
 import type { QoreNetwork } from "./network.js";
 import { PriceParser } from "./server.js";
 
@@ -66,8 +68,8 @@ export interface PqPerennialClientOptions {
   payer: Hex;
   secretKey: Uint8Array;
   positionId: bigint;
-  /** Reads the position's current action nonce from the vault. */
-  nonceOf: (vault: Hex, positionId: bigint) => Promise<bigint>;
+  /** Reads the position from the vault: its nonce, and whether it can pay. */
+  positionOf: (vault: Hex, positionId: bigint) => Promise<PerennialPosition>;
   now?: () => number;
 }
 
@@ -97,7 +99,16 @@ export class PqPerennialClientScheme implements SchemeNetworkClient {
     }
     const extra = parsePerennialExtra(requirements.extra);
     if (!extra) throw new Error("payment requirements are not pq-perennial version 1");
-    const nonce = await this.options.nonceOf(extra.vault, this.options.positionId);
+    const position = await this.options.positionOf(extra.vault, this.options.positionId);
+    // Refuse before signing anything the vault would refuse.
+    const shortfall = perennialShortfall(position, BigInt(requirements.amount));
+    if (shortfall === "budget") {
+      throw new Pq402Error(ErrorCode.BudgetExceeded, `budget left this period: ${position.budgetRemaining}`);
+    }
+    if (shortfall === "funds") {
+      throw new Pq402Error(ErrorCode.InsufficientFunds, "the position cannot cover this payment");
+    }
+    const nonce = position.nonce;
     const payload = createPerennialPayload({
       requirements,
       payer: this.options.payer,
@@ -199,10 +210,16 @@ export class PqPerennialFacilitator implements SchemeNetworkFacilitator {
         extra: { settledAt: result.settledAt },
       };
     } catch (err) {
+      const text = err instanceof Error ? err.message : String(err);
+      const reason = /BudgetExceeded/.test(text)
+        ? ErrorCode.BudgetExceeded
+        : /InsufficientBuffer/.test(text)
+          ? ErrorCode.InsufficientFunds
+          : ErrorCode.SettlementFailed;
       return {
         success: false,
-        errorReason: ErrorCode.SettlementFailed,
-        errorMessage: err instanceof Error ? err.message : String(err),
+        errorReason: reason,
+        errorMessage: text,
         transaction: "",
         network,
         payer: o.payer,
@@ -268,11 +285,22 @@ export class PqPerennialFacilitator implements SchemeNetworkFacilitator {
         return fail(ErrorCode.InvalidKey, "beneficiary has no proven ML-DSA-87 key on chain");
       }
       const signature = fromBase64(p.signature);
-      if (!mldsaVerify(key.publicKey, perennialSpendMessage(spend), signature)) {
+      const message = perennialSpendMessage(spend);
+      // Where the vault can be asked, its own encoding must match ours: a vault that signs
+      // other bytes than we verify would refuse every spend after we accepted it.
+      const vaultMessage = await this.options.reader.perennialSpendMessage?.(spend);
+      if (vaultMessage && toHex(vaultMessage) !== toHex(message)) {
+        return fail(ErrorCode.ChainUnavailable, "the vault's actionMessage differs from the PQ-402 encoding");
+      }
+      if (!mldsaVerify(key.publicKey, message, signature)) {
         return fail(ErrorCode.InvalidSignature, "signature does not verify against the beneficiary's key");
       }
-      if (position.buffer + position.pendingYield < spend.amount) {
-        return fail(ErrorCode.InsufficientFunds, "the position's buffer cannot cover the spend");
+      const shortfall = perennialShortfall(position, spend.amount);
+      if (shortfall === "budget") {
+        return fail(ErrorCode.BudgetExceeded, `budget left this period: ${position.budgetRemaining}`);
+      }
+      if (shortfall === "funds") {
+        return fail(ErrorCode.InsufficientFunds, "the position cannot cover the spend");
       }
       return { ok: true, spend, payer: p.payer, signature };
     } catch (err) {

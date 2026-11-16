@@ -50,6 +50,9 @@ function fakeNode(sent: Hex[]) {
           };
         case "eth_blockNumber":
           return "0x1";
+        case "eth_call":
+          // The simulation before sending: settle returns nothing.
+          return "0x";
         case "eth_maxPriorityFeePerGas":
           return "0x3b9aca00";
         default:

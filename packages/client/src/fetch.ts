@@ -6,6 +6,7 @@ import {
   SCHEME_PERENNIAL,
   SEALED_CONTENT_TYPE,
   SEALING_EXTENSION,
+  explainError,
   openResponse,
   parseReceipt,
   parseSealingInfo,
@@ -73,12 +74,18 @@ export interface PaymentOutcome {
 
 export type Pq402Response = Response & { payment?: PaymentOutcome };
 
+/**
+ * Why a paid request did not go through. `reason` is the stable PQ-402 / x402
+ * code (for example `invalid_pq402_budget_exceeded`); the message adds a
+ * sentence a person can act on.
+ */
 export class Pq402Error extends Error {
   constructor(
     message: string,
     readonly reason?: string,
   ) {
-    super(message);
+    const why = explainError(reason);
+    super(why ? `${message}: ${why}` : message);
     this.name = "Pq402Error";
   }
 }
@@ -91,6 +98,19 @@ interface Init {
 
 const textOf = (body: Init["body"]) =>
   body === undefined ? new Uint8Array() : typeof body === "string" ? new TextEncoder().encode(body) : body;
+
+/** The PQ-402 error code carried by an error or any of its causes. */
+function findCode(err: unknown): string | undefined {
+  for (
+    let e = err as { code?: unknown; cause?: unknown } | undefined, i = 0;
+    e && i < 5;
+    e = e.cause as typeof e, i++
+  ) {
+    if ((typeof e.code === "string" && e.code.startsWith("invalid_")) || e?.code === "insufficient_funds")
+      return e.code as string;
+  }
+  return undefined;
+}
 
 /** A copy backed by a plain ArrayBuffer, which is what `BodyInit` accepts. */
 const bodyOf = (bytes: Uint8Array): Uint8Array<ArrayBuffer> => new Uint8Array(bytes);
@@ -115,7 +135,7 @@ export function createPq402Fetch(options: Pq402FetchOptions) {
           payer: options.payer,
           secretKey: options.mldsaSecretKey,
           positionId: options.perennial.positionId,
-          nonceOf: async (vault, id) => (await readPosition(vault, id)).nonce,
+          positionOf: readPosition,
           ...now,
         })
       : undefined;
@@ -193,7 +213,15 @@ export function createPq402Fetch(options: Pq402FetchOptions) {
     const hash = requestHash({ method, target: requestTarget(url), body: wireBody });
     const client = new x402Client().register(requirements.network, scheme.forRequest(hash));
     client.setSpendControls(false);
-    const payload = await client.createPaymentPayload({ ...paymentRequired, accepts: [requirements] });
+    let payload: PaymentPayload;
+    try {
+      payload = await client.createPaymentPayload({ ...paymentRequired, accepts: [requirements] });
+    } catch (err) {
+      // The Perennial scheme refuses before signing when the position cannot pay.
+      const code = findCode(err);
+      if (code) throw new Pq402Error("payment not made", code);
+      throw err;
+    }
     if (sealing) payload.extensions = { ...payload.extensions, [SEALING_EXTENSION]: { info: sealing } };
 
     const paid = await doFetch(url, {

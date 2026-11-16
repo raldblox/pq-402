@@ -26,27 +26,34 @@ export const pq402EscrowAbi = parseAbi([
 ]);
 
 /**
- * The parts of the Perennial vault the `pq-perennial` scheme uses. The
- * `spend` signature, the `Spent` event and `Action.Spend = 4` are fixed by the
- * Perennial project; this fragment is copied from its compiled ABI.
+ * The parts of the Perennial vault the `pq-perennial` scheme uses, copied from
+ * the vault's compiled ABI (deployed 16 November 2026). The `spend` signature,
+ * the `Spent` event and `Action.Spend = 4` are fixed by the Perennial project.
  */
 export const perennialVaultAbi = parseAbi([
-  "struct Position { address owner; address beneficiary; bool ownerCanClose; bool succeeded; bool closed; uint64 payoutInterval; uint64 checkInPeriod; uint64 gracePeriod; uint64 lastCheckIn; uint64 lastPayout; uint256 payoutAmount; uint256 principal; uint256 shares; uint256 buffer; uint256 nonce; uint256 bufferCap; }",
+  "struct Position { address owner; address beneficiary; bool ownerCanClose; bool succeeded; bool closed; uint64 payoutInterval; uint64 checkInPeriod; uint64 gracePeriod; uint64 lastCheckIn; uint64 lastPayout; uint256 payoutAmount; uint256 principal; uint256 shares; uint256 buffer; uint256 nonce; uint256 bufferCap; bool budgetMode; uint64 windowStart; uint256 windowSpent; }",
   "function ASSET() view returns (address)",
   "function ACTION_DOMAIN() view returns (bytes32)",
   "function position(uint256 positionId) view returns (Position)",
   "function pendingYield(uint256 positionId) view returns (uint256)",
+  "function budgetRemaining(uint256 positionId) view returns (uint256)",
   "function actionMessage(uint256 positionId, uint8 action, uint256 nonce, uint256 deadline, bytes32 paramsHash) view returns (bytes)",
   "function spend(uint256 positionId, address to, uint256 amount, bytes32 ref, uint256 deadline, bytes signature)",
+  "function fund(uint256 positionId, uint256 amount)",
   "event Spent(uint256 indexed positionId, address indexed to, uint256 amount, bytes32 indexed ref)",
+  "event Funded(uint256 indexed positionId, address indexed from, uint256 amount)",
+  "error BudgetExceeded(uint256 positionId, uint256 remaining)",
   "error InsufficientBuffer(uint256 positionId, uint256 available)",
   "error PositionClosed(uint256 positionId)",
   "error PositionSucceeded(uint256 positionId)",
   "error SignatureExpired(uint256 deadline)",
   "error UnknownPosition(uint256 positionId)",
+  "error ZeroAmount()",
+  "error ZeroAddress()",
   "error PQCSignatureInvalid(address account)",
   "error PQCKeyNotProven(address account)",
   "error PQCKeyNotRegistered(address account)",
+  "error PQCKeyUnsupported(address account)",
   "error PQCUnavailable(address precompile)",
 ]);
 

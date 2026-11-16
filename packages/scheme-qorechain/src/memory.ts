@@ -23,8 +23,8 @@ const key = (a: string) => a.toLowerCase();
  * An in-memory stand-in for the chain: the `pqcKeyStatus` registry, the KEM
  * key registry, one `PQ402Escrow` and Perennial vault positions, with real
  * ML-DSA-87 verification. `settle` repeats the checks of `PQ402Escrow.settle`
- * and `spend` those of `PerennialVault.spend` as the Perennial project
- * specifies it, without its yield accounting (the buffer is set directly).
+ * and `spend` those of `PerennialVault.spend` (including budget mode), without
+ * its yield accounting: the buffer is set directly and budget periods do not roll.
  * For tests and the local example only; it proves nothing about the chain.
  */
 export class MemoryChain implements ChainReader {
@@ -67,8 +67,18 @@ export class MemoryChain implements ChainReader {
     this.balances.set(key(payer), (this.balances.get(key(payer)) ?? 0n) + amount);
   }
 
-  /** Open a Perennial position whose buffer already holds `buffer`. */
-  openPosition(vault: Hex, positionId: bigint, beneficiary: Hex, buffer: bigint) {
+  /**
+   * Open a Perennial position whose buffer already holds `buffer`. With
+   * `budget`, it is in budget mode: `budget.perPeriod` may be spent per period,
+   * from the buffer first and then `budget.principal`.
+   */
+  openPosition(
+    vault: Hex,
+    positionId: bigint,
+    beneficiary: Hex,
+    buffer: bigint,
+    budget?: { perPeriod: bigint; principal: bigint },
+  ) {
     this.positions.set(`${key(vault)}:${positionId}`, {
       vault,
       beneficiary,
@@ -77,6 +87,9 @@ export class MemoryChain implements ChainReader {
       pendingYield: 0n,
       closed: false,
       succeeded: false,
+      budgetMode: budget !== undefined,
+      principal: budget?.principal ?? 0n,
+      budgetRemaining: budget?.perPeriod ?? 0n,
     });
   }
 
@@ -138,6 +151,9 @@ export class MemoryChain implements ChainReader {
       pendingYield: pos.pendingYield,
       closed: pos.closed,
       succeeded: pos.succeeded,
+      budgetMode: pos.budgetMode,
+      principal: pos.principal,
+      budgetRemaining: pos.budgetRemaining,
     };
   }
 
@@ -163,9 +179,22 @@ export class MemoryChain implements ChainReader {
     const message = perennialSpendMessage({ ...s, nonce: pos.nonce });
     if (!mldsaVerify(k.publicKey, message, signature)) throw new Error("PQCSignatureInvalid");
     // A reverted transaction changes nothing, so check before touching state.
-    if (s.amount > pos.buffer) throw new Error("InsufficientBuffer");
+    if (pos.budgetMode) {
+      if (s.amount > pos.budgetRemaining)
+        throw new Error(`BudgetExceeded(${s.positionId}, ${pos.budgetRemaining})`);
+      if (s.amount > pos.buffer + pos.principal) throw new Error("InsufficientBuffer");
+    } else if (s.amount > pos.buffer) {
+      throw new Error("InsufficientBuffer");
+    }
     pos.nonce += 1n;
-    pos.buffer -= s.amount;
+    if (pos.budgetMode) {
+      pos.budgetRemaining -= s.amount;
+      const fromBuffer = s.amount < pos.buffer ? s.amount : pos.buffer;
+      pos.buffer -= fromBuffer;
+      pos.principal -= s.amount - fromBuffer;
+    } else {
+      pos.buffer -= s.amount;
+    }
     this.paid.set(key(s.to), (this.paid.get(key(s.to)) ?? 0n) + s.amount);
     this.txCount += 1;
     return { transaction: keccak256(toHex(`memory-spend-${this.txCount}`)), settledAt: this.clock };

@@ -40,12 +40,8 @@ function localChainView(memory: MemoryChain): Handler {
     const m = /^\/local-chain\/position\/(0x[0-9a-fA-F]{40})\/([0-9]+)$/.exec(req.target);
     if (!m) return handler(req);
     const pos = await memory.perennialPosition(m[1] as Hex, BigInt(m[2]!));
-    const body = JSON.stringify({
-      ...pos,
-      nonce: pos.nonce.toString(),
-      buffer: pos.buffer.toString(),
-      pendingYield: "0",
-    });
+    // Every bigint as a decimal string.
+    const body = JSON.stringify(pos, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v));
     return { status: 200, contentType: "application/json", body: new TextEncoder().encode(body) };
   };
 }

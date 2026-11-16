@@ -48,7 +48,7 @@ function setup(buffer = 10_000n) {
     payer: AGENT,
     secretKey: agentKeys.secretKey,
     positionId: 7n,
-    nonceOf: async (vault, id) => (await chain.perennialPosition(vault, id)).nonce,
+    positionOf: (vault, id) => chain.perennialPosition(vault, id),
     now: () => T0,
   });
   return { chain, facilitator, client };
@@ -93,7 +93,7 @@ describe("pq-perennial", () => {
       payer: AGENT,
       secretKey: mldsaKeyPair(new Uint8Array(32).fill(66)).secretKey,
       positionId: 7n,
-      nonceOf: async () => 0n,
+      positionOf: (vault, id) => chain.perennialPosition(vault, id),
       now: () => T0,
     });
     expect((await facilitator.verify(await payload(thief), requirements)).invalidReason).toBe(
@@ -110,7 +110,7 @@ describe("pq-perennial", () => {
       payer: other,
       secretKey: agentKeys.secretKey,
       positionId: 7n,
-      nonceOf: async () => 0n,
+      positionOf: (vault, id) => chain.perennialPosition(vault, id),
       now: () => T0,
     });
     expect((await facilitator.verify(await payload(impostor), requirements)).invalidReason).toBe(
@@ -147,8 +147,22 @@ describe("pq-perennial", () => {
     chain.advance(120);
     expect((await facilitator.verify(pp, requirements)).invalidReason).toBe(ErrorCode.Expired);
 
+    // Above the buffer: the client refuses before signing, and the facilitator refuses a
+    // spend signed by a client that did not check.
     const poor = setup(1_999n);
-    expect((await poor.facilitator.verify(await payload(poor.client), requirements)).invalidReason).toBe(
+    const err = await payload(poor.client).catch((e: unknown) => e);
+    expect((err as { code?: string }).code).toBe(ErrorCode.InsufficientFunds);
+    const blind = new PqPerennialClientScheme({
+      payer: AGENT,
+      secretKey: agentKeys.secretKey,
+      positionId: 7n,
+      positionOf: async (vault, id) => ({
+        ...(await poor.chain.perennialPosition(vault, id)),
+        buffer: 10_000n,
+      }),
+      now: () => T0,
+    });
+    expect((await poor.facilitator.verify(await payload(blind), requirements)).invalidReason).toBe(
       ErrorCode.InsufficientFunds,
     );
   });
@@ -192,5 +206,112 @@ describe("pq-perennial", () => {
     });
     expect(view?.receipt.settlement).toBe(VAULT);
     expect(describePayment(requirements, { payer: AGENT })).toBeUndefined();
+  });
+
+  describe("budget mode", () => {
+    function budgetSetup(buffer: bigint, perPeriod: bigint, principal: bigint) {
+      const chain = new MemoryChain(ESCROW, T0);
+      chain.registerKey(AGENT, agentKeys.publicKey);
+      chain.openPosition(VAULT, 7n, AGENT, buffer, { perPeriod, principal });
+      const facilitator = new PqPerennialFacilitator({
+        networks: ["eip155:9800"],
+        reader: chain,
+        settler: chain.settler(RELAYER),
+      });
+      const client = new PqPerennialClientScheme({
+        payer: AGENT,
+        secretKey: agentKeys.secretKey,
+        positionId: 7n,
+        positionOf: (vault, id) => chain.perennialPosition(vault, id),
+        now: () => T0,
+      });
+      return { chain, facilitator, client };
+    }
+
+    it("pays from the principal once the buffer is empty, within the period's budget", async () => {
+      const { chain, facilitator, client } = budgetSetup(500n, 5_000n, 100_000n);
+      for (let i = 0; i < 2; i++) {
+        const settled = await facilitator.settle(await payload(client), requirements);
+        expect(settled.success).toBe(true);
+      }
+      const pos = await chain.perennialPosition(VAULT, 7n);
+      expect(pos.buffer).toBe(0n);
+      expect(pos.principal).toBe(100_000n - 3_500n);
+      expect(pos.budgetRemaining).toBe(1_000n);
+      expect(chain.paidTo(PAYEE)).toBe(4_000n);
+    });
+
+    it("refuses before signing when the budget is used up, and the facilitator agrees", async () => {
+      const { chain, facilitator, client } = budgetSetup(10_000n, 1_999n, 100_000n);
+      const err = await payload(client).catch((e: unknown) => e);
+      expect((err as { code?: string }).code).toBe(ErrorCode.BudgetExceeded);
+
+      // A client that skips the check is refused by the facilitator with the same code.
+      const careless = new PqPerennialClientScheme({
+        payer: AGENT,
+        secretKey: agentKeys.secretKey,
+        positionId: 7n,
+        positionOf: async (vault, id) => ({
+          ...(await chain.perennialPosition(vault, id)),
+          budgetRemaining: 10_000n,
+        }),
+        now: () => T0,
+      });
+      const pp = await payload(careless);
+      expect((await facilitator.verify(pp, requirements)).invalidReason).toBe(ErrorCode.BudgetExceeded);
+      expect(chain.paidTo(PAYEE)).toBe(0n);
+    });
+
+    it("refuses when buffer and principal together cannot cover the spend", async () => {
+      const { client } = budgetSetup(500n, 100_000n, 1_000n);
+      const err = await payload(client).catch((e: unknown) => e);
+      expect((err as { code?: string }).code).toBe(ErrorCode.InsufficientFunds);
+    });
+  });
+
+  it("fails closed when the vault's actionMessage differs from the local encoding", async () => {
+    const { chain, client } = setup();
+    const reader = Object.assign(Object.create(chain) as MemoryChain, {
+      perennialSpendMessage: async () => new Uint8Array(256),
+    });
+    const facilitator = new PqPerennialFacilitator({ networks: ["eip155:9800"], reader });
+    const result = await facilitator.verify(await payload(client), requirements);
+    expect(result.invalidReason).toBe(ErrorCode.ChainUnavailable);
+    expect(result.invalidMessage).toMatch(/actionMessage/);
+  });
+
+  it("accepts when the vault's actionMessage equals the local encoding", async () => {
+    const { chain, client } = setup();
+    const reader = Object.assign(Object.create(chain) as MemoryChain, {
+      perennialSpendMessage: async (s: Parameters<typeof perennialSpendMessage>[0]) =>
+        perennialSpendMessage(s),
+    });
+    const facilitator = new PqPerennialFacilitator({ networks: ["eip155:9800"], reader });
+    expect((await facilitator.verify(await payload(client), requirements)).isValid).toBe(true);
+  });
+
+  it("maps the vault's revert reasons to codes when settlement fails", async () => {
+    for (const [revert, code] of [
+      ["BudgetExceeded(7, 0)", ErrorCode.BudgetExceeded],
+      ["InsufficientBuffer(7, 0)", ErrorCode.InsufficientFunds],
+      ["something else", "invalid_transaction_state"],
+    ] as const) {
+      const { chain, client } = setup();
+      const facilitator = new PqPerennialFacilitator({
+        networks: ["eip155:9800"],
+        reader: chain,
+        settler: {
+          address: RELAYER,
+          settle: async () => {
+            throw new Error("unused");
+          },
+          spend: async () => {
+            throw new Error(`The contract function "spend" reverted: ${revert}`);
+          },
+        },
+      });
+      const settled = await facilitator.settle(await payload(client), requirements);
+      expect(settled.errorReason).toBe(code);
+    }
   });
 });

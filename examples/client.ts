@@ -33,9 +33,12 @@ function localKeys(origin: string): KeyDirectory {
         beneficiary: p.beneficiary as Hex,
         nonce: BigInt(p.nonce as string),
         buffer: BigInt(p.buffer as string),
-        pendingYield: 0n,
+        pendingYield: BigInt(p.pendingYield as string),
         closed: p.closed as boolean,
         succeeded: p.succeeded as boolean,
+        budgetMode: p.budgetMode as boolean,
+        principal: BigInt(p.principal as string),
+        budgetRemaining: BigInt(p.budgetRemaining as string),
       };
     },
   };
