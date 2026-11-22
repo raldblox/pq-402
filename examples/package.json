@@ -9,7 +9,8 @@
     "server": "tsx --env-file-if-exists=../.env server.ts",
     "client": "tsx --env-file-if-exists=../.env client.ts",
     "testnet": "tsx --env-file-if-exists=../.env testnet.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx --env-file-if-exists=../.env demo.ts"
   },
   "dependencies": {
     "@cosmjs/stargate": "^0.39.0",

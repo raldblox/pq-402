@@ -21,7 +21,8 @@
     "testnet": "pnpm --filter @pq402/examples run testnet",
     "contracts:build": "forge build --root contracts",
     "contracts:test": "forge test --root contracts",
-    "contracts:fmt:check": "forge fmt --root contracts --check"
+    "contracts:fmt:check": "forge fmt --root contracts --check",
+    "demo": "pnpm --filter @pq402/examples run demo"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

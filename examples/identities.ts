@@ -69,7 +69,16 @@ export function requireEnv(name: string): string {
   return value;
 }
 
+/**
+ * The two testnet parties. With only QORE_MNEMONIC set, one account plays both
+ * roles (gateway and payer), so every payment returns to it.
+ */
 export async function testnetParties(): Promise<{ gateway: Party; payer: Party }> {
+  const single = process.env.QORE_MNEMONIC?.trim();
+  if (single && !process.env.GATEWAY_MNEMONIC?.trim() && !process.env.PAYER_MNEMONIC?.trim()) {
+    const one = await partyFromMnemonic(single);
+    return { gateway: one, payer: one };
+  }
   return {
     gateway: await partyFromMnemonic(requireEnv("GATEWAY_MNEMONIC")),
     payer: await partyFromMnemonic(requireEnv("PAYER_MNEMONIC")),
