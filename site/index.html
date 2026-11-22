@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PQ-402 recorded run</title>
+    <meta
+      name="description"
+      content="Pay for an API call with a post-quantum signature; get an answer only you can read. A recorded PQ-402 run on the QoreChain testnet, with its transaction hashes."
+    />
+    <meta property="og:title" content="PQ-402" />
+    <meta
+      property="og:description"
+      content="Pay for an API call with a post-quantum signature; get an answer only you can read."
+    />
+    <meta property="og:image" content="https://pq-402.vercel.app/social.png" />
+    <meta property="og:url" content="https://pq-402.vercel.app" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --bg: #f7f7f4;
+        --panel: #ffffff;
+        --text: #17181a;
+        --muted: #5d6168;
+        --line: #e2e2dc;
+        --accent: #1f6f5c;
+        --code: #f0f0ea;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #111314;
+          --panel: #181b1d;
+          --text: #e8e8e4;
+          --muted: #9aa0a6;
+          --line: #2a2e31;
+          --accent: #5cc4a6;
+          --code: #202427;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.55 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 40px 16px 64px;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      .lede {
+        color: var(--muted);
+        margin: 0 0 28px;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        font-size: 14px;
+        color: var(--muted);
+        margin-bottom: 28px;
+      }
+      .meta a,
+      a {
+        color: var(--accent);
+      }
+      ol.steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        counter-reset: step;
+      }
+      ol.steps > li {
+        counter-increment: step;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 12px;
+      }
+      ol.steps > li h2 {
+        font-size: 16px;
+        margin: 0 0 10px;
+      }
+      ol.steps > li h2::before {
+        content: counter(step) ". ";
+        color: var(--accent);
+      }
+      dl {
+        display: grid;
+        grid-template-columns: minmax(120px, 210px) 1fr;
+        gap: 6px 14px;
+        margin: 0;
+        font-size: 14px;
+      }
+      dt {
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+      dd {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 36px 0 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      td,
+      th {
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        padding: 7px 6px;
+        vertical-align: top;
+        overflow-wrap: anywhere;
+      }
+      td.hash {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      pre {
+        background: var(--code);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+      .note {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      @media (max-width: 560px) {
+        dl {
+          grid-template-columns: 1fr;
+        }
+        dt {
+          margin-top: 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Pay for an API call with a post-quantum signature; get an answer only you can read.</h1>
+      <p class="lede">
+        A recorded run of PQ-402 on the QoreChain testnet. A server charges 0.002 fUSD per call. The client
+        pays with its ML-DSA-87 key, once from an escrow deposit and once from a Perennial position. Its
+        question travels sealed to the server's registered ML-KEM-1024 key, and the answer comes back sealed
+        to the payer's. The "model" is a stand-in that answers with a fixed sentence: what is real here is the
+        payment, the settlement and the sealing.
+      </p>
+      <div class="meta" id="meta"></div>
+      <ol class="steps" id="steps"></ol>
+
+      <h3>Transactions</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>What</th>
+            <th>Hash</th>
+          </tr>
+        </thead>
+        <tbody id="txs"></tbody>
+      </table>
+
+      <h3>Reproduce it</h3>
+      <pre>
+git clone --recurse-submodules https://github.com/raldblox/pq-402.git
+cd pq-402
+pnpm install &amp;&amp; pnpm build &amp;&amp; pnpm test
+
+# locally, against an in-memory chain (no keys, no funds)
+pnpm example:server          # terminal 1
+pnpm example:client          # terminal 2
+
+# on the testnet: fill .env from .env.example, then
+pnpm demo</pre>
+      <p class="note">
+        Protocol: <a href="https://github.com/raldblox/pq-402/blob/main/docs/spec.md">docs/spec.md</a>. What
+        is defended and what is not:
+        <a href="https://github.com/raldblox/pq-402/blob/main/docs/threat-model.md">docs/threat-model.md</a>.
+        Packages: <a href="https://www.npmjs.com/org/pq402">@pq402 on npm</a>. Source:
+        <a href="https://github.com/raldblox/pq-402">github.com/raldblox/pq-402</a>. The QoreChain PQC
+        precompiles and KEM key registry used here are testnet features.
+      </p>
+    </main>
+    <script src="run.js"></script>
+    <script>
+      (function () {
+        var run = window.PQ402_RUN;
+        var explorer = "https://explore.qore.network/tx/";
+        function el(tag, attrs, text) {
+          var e = document.createElement(tag);
+          for (var k in attrs || {}) e.setAttribute(k, attrs[k]);
+          if (text !== undefined) e.textContent = text;
+          return e;
+        }
+        function show(v) {
+          return typeof v === "string" ? v : JSON.stringify(v, null, 2);
+        }
+        if (!run) {
+          document.getElementById("steps").appendChild(el("li", {}, "No recorded run found (run.js)."));
+          return;
+        }
+        var meta = document.getElementById("meta");
+        meta.appendChild(
+          el("span", {}, "Recorded " + run.recordedAt.replace("T", " ").slice(0, 16) + " UTC"),
+        );
+        meta.appendChild(el("span", {}, run.network));
+        meta.appendChild(el("span", {}, "Escrow " + run.escrow));
+        meta.appendChild(el("span", {}, "Perennial vault " + run.vault));
+        var list = document.getElementById("steps");
+        run.steps.forEach(function (s) {
+          var li = el("li");
+          li.appendChild(el("h2", {}, s.title));
+          var dl = el("dl");
+          Object.keys(s.detail).forEach(function (k) {
+            dl.appendChild(el("dt", {}, k));
+            var v = s.detail[k];
+            var dd = el("dd");
+            if (k === "transaction" && typeof v === "string" && v.indexOf("0x") === 0) {
+              var a = el("a", { href: explorer + v, rel: "noopener" }, v);
+              dd.appendChild(a);
+            } else dd.textContent = show(v);
+            dl.appendChild(dd);
+          });
+          li.appendChild(dl);
+          list.appendChild(li);
+        });
+        var body = document.getElementById("txs");
+        run.transactions.forEach(function (t) {
+          var tr = el("tr");
+          tr.appendChild(el("td", {}, t.what));
+          var td = el("td", { class: "hash" });
+          if (t.lane === "evm") td.appendChild(el("a", { href: explorer + t.hash, rel: "noopener" }, t.hash));
+          else td.textContent = t.hash + " (native)";
+          tr.appendChild(td);
+          body.appendChild(tr);
+        });
+      })();
+    </script>
+  </body>
+</html>

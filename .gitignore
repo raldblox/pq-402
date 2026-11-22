@@ -27,3 +27,4 @@ broadcast/
 
 # Logs
 *.log
+.vercel

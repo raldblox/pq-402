@@ -7,3 +7,5 @@ contracts/broadcast
 **/coverage
 packages/core/test/vectors/*.json
 **/*.md
+site/run.json
+site/run.js
