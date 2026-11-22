@@ -124,7 +124,13 @@ gateway's keys; `nodeListener` mounts it on `node:http`. See
 | [`@pq402/client`](packages/client) | the paying `fetch` |
 | [`contracts/`](contracts) | `PQ402Escrow` (Foundry) |
 
-Nothing is published to npm yet.
+Published on npm under the [`@pq402`](https://www.npmjs.com/org/pq402) scope
+([decision 009](docs/decisions/009-npm-scope.md)):
+
+```bash
+npm install @pq402/client @pq402/scheme-qorechain   # paying side
+npm install @pq402/server @pq402/scheme-qorechain   # serving side
+```
 
 ## Status
 
