@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `pnpm demo` (`examples/demo.ts`): one complete run on the testnet, a
+  `pq-erc20` and a `pq-perennial` payment for sealed calls, recorded to
+  `site/run.json`; one account can play both roles with `QORE_MNEMONIC`.
+- `docs/quickstart.md`, the demo page (`site/`, live at
+  https://pq-402.vercel.app), the cover and social images
+  (`scripts/site.mjs`), and `AI_USAGE.md`.
+
+### Changed
+
+- The README leads with what PQ-402 does, why, and how, and lists both
+  recorded testnet runs with their transaction hashes.
+
 ## [0.2.0] - 2026-11-17
 
 ### Changed

@@ -166,3 +166,16 @@ vaults the Perennial project deployed on 16 and 17 November 2026:
 
 PQ-402 reads the vault address from configuration (`PERENNIAL_VAULT`), never
 from code.
+
+## The recorded `pnpm demo` run (22 November 2026)
+
+| Call | Gas used |
+|---|---|
+| `PQ402Escrow.settle` | 253,160 |
+| Perennial vault `spend` (budget-mode position, harvest first, one `pqcVerify`) | 324,172 |
+| `withdraw` | 65,000 |
+
+The whole run (two native window messages, approve, deposit, two
+settlements, a signed withdrawal request and its payout) cost 0.305408 QOR.
+Several projects shared one account; only one EVM window exists per account,
+so runs were taken in turn.
