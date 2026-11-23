@@ -108,6 +108,22 @@ from a fresh, unfunded account.
   repository root does not load the root `.env`; `pnpm testnet deploy` passes
   the environment explicitly.
 
+## The KEM key registration carries an ML-DSA-87 signature
+
+Read on 23 November 2026 from REST `/cosmos/tx/v1beta1/txs/{hash}` for
+`D4E53C1B0164FC76656D07CB76611134E7EE0C8300CC6110961EAAB096DAD5EC`: one
+`/qorechain.pqc.v1.MsgRegisterKEMKey` (sender `qor1sfwz…lyg`, algorithm 2,
+1,568-byte key), with a `/qorechain.pqc.v1.PQCHybridSignature` extension
+holding a 4,627-byte ML-DSA-87 signature next to the classical one.
+
+## Gas for a Perennial spend varies
+
+A budget-mode spend that has to redeem principal from the vault's yield
+source ran out of gas at a fixed 350,000 limit
+(`0xbacd85244ff115139ef555e01ab93fa42e09ffc2cf8c1bc497453c53eca75d26`,
+reverted), while one paid from the buffer used 324,172. The relayer now
+estimates every call.
+
 ## Agent authenticators
 
 Read on 16 November 2026 from the `@qorechain/sdk` 0.14.0 type declarations
