@@ -219,7 +219,7 @@ their interface, not their cryptography.
 | Signed bytes, ML-DSA-87, ML-KEM-1024 sealing | 109 TypeScript tests, known-answer vectors cross-checked in Solidity | the client's signature verified by the real `pqcVerify` (`eth_call`), refused with one bit flipped |
 | `PQ402Escrow` | 43 Foundry tests: unit, fuzz (512 runs), invariant (8,192 calls), vectors | deployed; deposits, settlements, a signed withdrawal and payouts (below) |
 | `pq-erc20` end to end | over real HTTP against the in-memory chain | three paid, sealed calls settled (below) |
-| `pq-perennial` end to end | over real HTTP against an in-memory model of `spend`, budget mode included; relayer gas estimated per call | one paid, sealed call settled from an agent-budget position (below); signing bytes match all three deployed vaults; a spend that has to draw on the vault's principal has not been run since the gas fix |
+| `pq-perennial` end to end | over real HTTP against an in-memory model of `spend`, budget mode included; relayer gas estimated per call | one paid, sealed call settled from an agent-budget position (below); signing bytes match all three deployed vaults; a spend that drew on principal settled through the 0.2.1 relayer ([notes](docs/qorechain-notes.md#gas-for-a-perennial-spend-varies)) |
 | Header sizes | `PAYMENT-SIGNATURE` 9,396 B, `PAYMENT-RESPONSE` 9,052 B, under Node's default 16 KiB | – |
 | Proxies, CDNs, browsers | not tested; nginx's default 8 KB header line is too small ([decision 005](docs/decisions/005-header-size.md)) | – |
 

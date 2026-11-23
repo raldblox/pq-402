@@ -124,6 +124,33 @@ source ran out of gas at a fixed 350,000 limit
 reverted), while one paid from the buffer used 324,172. The relayer now
 estimates every call.
 
+Run on 23 November 2026 with the 0.2.1 settler, from the workspace, on the
+no-yield budget-mode vault `0x76DAC5461fF361f911e5F39810c9455a6180C180`
+(its yield source pays nothing, so the buffer stays empty and every spend
+draws on principal). The owner account opened position 4 with 0.02 fUSD,
+itself as beneficiary, a budget of 0.002 fUSD an hour and `ownerCanClose`,
+made one paid, sealed call through `pq-perennial`, then closed the position:
+
+| Step | Transaction | Gas used / limit |
+|---|---|---|
+| Open EVM window (scoped to the vault and fUSD, 4 txs) | `016A6694336627F56CB128EE267F75E96126EB4C3D9CDED8CCC78C7810FB2A29` (native) | |
+| Approve exactly 20,000 fUSD units to the vault | `0x37d24bb8e18e402ffd7499b5a205cd2a98cc3675328af079e419f9bfed4d2880` | 46,318 / 55,581 |
+| Open position 4 (budget mode, 20,000 units) | `0x115c1fb6d22be3e25129142d3640c14d58202af28d4e47ffcb7966107a1ece1f` | 315,302 / 413,911 |
+| `spend` of 2,000 units, relayed by `EvmSettler` | `0x93ba69d01248ca5f400fad0474fa950969f6d0c1d3aa9927011f267d1a781d41` | 337,253 / 434,547 |
+| Close position 4 (owner, ML-DSA-87 signed) | `0x944cec9bbda587134dc0ea4aea82afe2686be10eb8a4d02a0c3ffdde438162a2` | 248,322 / 332,756 |
+| Close EVM window | `858230FDBF909879E96596E8C1F5869E0CFC07D0E070318144435AEB789ADDFE` (native) | |
+
+The approval was sent in an earlier window (`78ECB8B7…8CE3`, opened and
+closed by a run that stopped on a script error before `open`); the second
+run reused that exact allowance. Position 4 read principal 20,000 and buffer
+0 before the spend, and principal 18,000, buffer 0 and `windowSpent` 2,000
+after it; the spend's receipt holds a `PrincipalDrawn(4, 2000)` event. The
+settler's limit of 434,547 is its estimate plus 20%, so the estimate was
+about 362,100, above the old fixed 350,000. Closing returned the rest; the
+owner's fUSD balance read 219.090933 before and after (the spend paid the
+same account), the vault allowance read 0 afterwards, and QOR went from
+12.620268 to 12.124601 across both windows.
+
 ## Agent authenticators
 
 Read on 16 November 2026 from the `@qorechain/sdk` 0.14.0 type declarations
