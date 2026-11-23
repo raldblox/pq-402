@@ -359,7 +359,7 @@ async function main() {
     const { server, origin } = await startServer({ chain: evm, settler, gateway, escrow, vault }, 0);
     try {
       await paidCall("call 1, paid from the escrow", origin, payer, undefined);
-      await paidCall("call 2, paid from the Perennial position", origin, payer, positionId);
+      await paidCall("call 2, paid from an on-chain agent budget", origin, payer, positionId);
     } finally {
       server.close();
     }

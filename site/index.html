@@ -167,10 +167,10 @@
       <h1>Pay for an API call with a post-quantum signature; get an answer only you can read.</h1>
       <p class="lede">
         A recorded run of PQ-402 on the QoreChain testnet. A server charges 0.002 fUSD per call. The client
-        pays with its ML-DSA-87 key, once from an escrow deposit and once from a Perennial position. Its
-        question travels sealed to the server's registered ML-KEM-1024 key, and the answer comes back sealed
-        to the payer's. The "model" is a stand-in that answers with a fixed sentence: what is real here is the
-        payment, the settlement and the sealing.
+        pays with its ML-DSA-87 key, once from an escrow deposit and once from an on-chain agent budget (a
+        vault position its owner set aside for it). Its question travels sealed to the server's registered
+        ML-KEM-1024 key, and the answer comes back sealed to the payer's. The "model" is a stand-in that
+        answers with a fixed sentence: what is real here is the payment, the settlement and the sealing.
       </p>
       <div class="meta" id="meta"></div>
       <ol class="steps" id="steps"></ol>

@@ -5,11 +5,20 @@
 **Pay for an API call with a post-quantum signature; get an answer only you
 can read.**
 
-PQ-402 lets an HTTP server charge per request and a client pay automatically,
-with the payment authorised by an ML-DSA-87 signature, settled on the
-QoreChain testnet, and the request and the answer encrypted with ML-KEM-1024
-to keys registered on chain. It extends [x402](https://github.com/x402-foundation/x402),
-the HTTP `402 Payment Required` protocol, without changing its wire format.
+**The problem.** An API provider who wants to charge per request needs
+accounts, API keys and billing, and an agent cannot sign up for any of them.
+Pay-per-request protocols such as [x402](https://github.com/x402-foundation/x402)
+remove the accounts, but the payment is still authorised with an ECDSA
+signature that a quantum computer could forge, and the request and the answer
+can be read by anyone on the path beyond TLS, or recorded today and read later.
+
+**What PQ-402 does.** A server answers `402 Payment Required` with a price.
+The client pays with a signature from its **ML-DSA-87** key, which the
+contract that moves the money checks on the QoreChain testnet. The request
+travels encrypted with **ML-KEM-1024** to the server's registered key, and the
+answer comes back encrypted to the client's registered key, so only the payer
+can read it. Each answer carries a receipt signed by the server's ML-DSA-87
+key. The wire format stays x402 v2.
 
 **Live demo:** [pq-402.vercel.app](https://pq-402.vercel.app), a recorded run
 on the testnet, step by step, with its transaction hashes.
@@ -27,18 +36,13 @@ The client pays one of two ways ([decision 007](docs/decisions/007-two-schemes.m
 
 | Scheme | Paid from | Settled by |
 |---|---|---|
-| `pq-erc20` | the client's fUSD deposit in [`PQ402Escrow`](contracts/src/PQ402Escrow.sol) | `PQ402Escrow.settle`, which checks the signature with the `pqcVerify` precompile |
-| `pq-perennial` | a [Perennial](https://github.com/raldblox/perennial) position's buffer | the vault's `spend`, signed by the position's beneficiary |
+| `pq-erc20` | a deposit of fUSD in [`PQ402Escrow`](contracts/src/PQ402Escrow.sol), a small escrow contract | `PQ402Escrow.settle`, which checks the ML-DSA-87 signature with the `pqcVerify` precompile |
+| `pq-perennial` | an on-chain agent budget: a vault position whose owner set aside funds the agent may spend (see [Works with](#works-with)) | the vault's own `spend`, which checks the agent's ML-DSA-87 signature |
 
 The client holds no QOR and sends no transaction: the server's facilitator
 submits the settlement and pays the gas ([decision 008](docs/decisions/008-relayer-pays-gas.md)).
 
-## Why
-
-x402 payments are authorised with ECDSA signatures, and the requests and
-answers they pay for travel in plaintext beyond TLS. A quantum computer that
-breaks ECDSA could forge such payments; one that breaks today's key exchange
-could read recorded traffic later. PQ-402 changes three things:
+## Why post-quantum
 
 - **The payment** is authorised by ML-DSA-87 (FIPS 204), verified on chain
   against the key the payer registered with QoreChain, by the contract that
@@ -81,6 +85,73 @@ client                                                     server
 Headers and JSON objects are standard x402 v2, so a stock x402 client reads
 the `402` and skips the schemes it cannot pay. The normative description is
 [docs/spec.md](docs/spec.md); the reasoning is in [docs/decisions/](docs/decisions/).
+
+## Post-quantum encryption, in detail
+
+Each point below names the code that does it, the test that shows it, and the
+testnet transaction where it happened.
+
+**1. ML-KEM-1024 encryption.** Bodies are sealed with QoreSeal envelopes in
+ML-KEM-1024 mode (`mode: "mlkem"`): `sealRequest`, `openRequest`,
+`sealResponse` and `openResponse` in
+[packages/core/src/sealing.ts](packages/core/src/sealing.ts) call QoreSeal's
+`seal` and `open` and nothing else; there is no cryptography of our own. The
+request is sealed for the purpose `pq402-request`, bound to the method, path
+and content type; the answer for `pq402-response`, bound to the request hash
+and content type. Tests:
+[packages/core/test/sealing.test.ts](packages/core/test/sealing.test.ts)
+(a wrong key, path, method, type or chain cannot open; a flipped byte is
+rejected) and a known-answer envelope in
+[packages/core/test/vectors/v1.json](packages/core/test/vectors/v1.json).
+On the testnet, calls 1 and 2 of the [recorded run](https://pq-402.vercel.app)
+sent 1,807-byte envelopes and got 1,799-byte envelopes back; they settled in
+`0x3e5ee052…b14f5ca` and `0x88d60cb2…da18816`.
+
+**2. Registered recipient keys.** Neither side takes a key from the other's
+messages. The `402` names the gateway's address; the client reads the
+gateway's ML-KEM-1024 key from the chain's KEM key registry, and the server
+reads the payer's the same way, through `EvmChainReader.kemKey` in
+[packages/scheme-qorechain/src/evm.ts](packages/scheme-qorechain/src/evm.ts)
+(QoreSeal's `fetchMlkemPublicKey`, REST `/qorechain/pqc/v1/kem/{address}`). The
+server reads the payer's key before running the handler and refuses a payer
+without one. The account in the recorded runs registered its key with
+`MsgRegisterKEMKey` in `D4E53C1B0164FC76656D07CB76611134E7EE0C8300CC6110961EAAB096DAD5EC`
+(algorithm 2, a 1,568-byte ML-KEM-1024 key). Tests in
+[packages/client/test/roundtrip.test.ts](packages/client/test/roundtrip.test.ts):
+"cannot open a request sealed to a key that is not the gateway's" and
+"refuses a payer with no registered KEM key, without running the handler".
+
+**3. Binding to the ML-DSA-87 identity.** The encryption key and the signing
+key belong to the same QoreChain account, and both are read by that account's
+address:
+
+- The KEM key was registered in a hybrid-signed transaction: the
+  `MsgRegisterKEMKey` above carries a `PQCHybridSignature` extension with a
+  4,627-byte ML-DSA-87 signature alongside the account's classical one.
+  QoreChain asks for that signature on native transactions other than the
+  ML-DSA key registration itself
+  ([post-quantum signing](https://docs.qorechain.io/developer-guide/post-quantum-signing)).
+- A payment is accepted only when its ML-DSA-87 signature verifies against the
+  key `pqcKeyStatus` reports for the payer's address, registered with proof of
+  possession: in the facilitator
+  ([facilitator.ts](packages/scheme-qorechain/src/facilitator.ts),
+  [perennial.ts](packages/scheme-qorechain/src/perennial.ts)) and again on
+  chain ([PQCAuth.sol](contracts/src/libraries/PQCAuth.sol)).
+- Only then does the server seal the answer, to the KEM key registered for that
+  same address. A stolen classical key alone cannot sign a payment.
+- In the other direction, the receipt is signed by the gateway's ML-DSA-87 key,
+  and the client checks it against `pqcKeyStatus` for the gateway's address,
+  the account whose KEM key sealed the request (test: "rejects a receipt not
+  signed by the gateway's registered key").
+
+**4. Client-side encryption and decryption.** The client seals before anything
+leaves its process and opens after the answer arrives, in
+[packages/client/src/fetch.ts](packages/client/src/fetch.ts) (`sealRequest`
+after reading the gateway's key; `openResponse` after checking the receipt).
+A sealing client first sends a body-less probe, so the plaintext is never sent,
+not even to learn the price. Test: "seals the request body: the plaintext never
+crosses the wire". The recorded testnet run checks the same: its transcript
+records `plaintext visible on the wire: false` for both calls.
 
 ## Install
 
@@ -128,8 +199,8 @@ pnpm contracts:test       # Solidity: unit, fuzz, invariant, vectors
 
 # terminal 1: a paid endpoint
 pnpm example:server
-# terminal 2: pays three calls from a Perennial position and two from
-# an escrow, and opens every sealed answer
+# terminal 2: pays three calls from an agent-budget position and two
+# from an escrow, and opens every sealed answer
 pnpm example:client
 ```
 
@@ -145,10 +216,10 @@ their interface, not their cryptography.
 
 | Part | Tested | On the testnet |
 |---|---|---|
-| Signed bytes, ML-DSA-87, ML-KEM-1024 sealing | 105 TypeScript tests, known-answer vectors cross-checked in Solidity | the client's signature verified by the real `pqcVerify` (`eth_call`), refused with one bit flipped |
+| Signed bytes, ML-DSA-87, ML-KEM-1024 sealing | 109 TypeScript tests, known-answer vectors cross-checked in Solidity | the client's signature verified by the real `pqcVerify` (`eth_call`), refused with one bit flipped |
 | `PQ402Escrow` | 43 Foundry tests: unit, fuzz (512 runs), invariant (8,192 calls), vectors | deployed; deposits, settlements, a signed withdrawal and payouts (below) |
 | `pq-erc20` end to end | over real HTTP against the in-memory chain | three paid, sealed calls settled (below) |
-| `pq-perennial` end to end | over real HTTP against an in-memory model of `spend`, budget mode included | one paid, sealed call settled from a position on the accelerated Perennial vault (below); signing bytes match all three deployed vaults |
+| `pq-perennial` end to end | over real HTTP against an in-memory model of `spend`, budget mode included; relayer gas estimated per call | one paid, sealed call settled from an agent-budget position (below); signing bytes match all three deployed vaults; a spend that has to draw on the vault's principal has not been run since the gas fix |
 | Header sizes | `PAYMENT-SIGNATURE` 9,396 B, `PAYMENT-RESPONSE` 9,052 B, under Node's default 16 KiB | – |
 | Proxies, CDNs, browsers | not tested; nginx's default 8 KB header line is too small ([decision 005](docs/decisions/005-header-size.md)) | – |
 
@@ -162,7 +233,7 @@ source verification: the build settings are in
 | | |
 |---|---|
 | `PQ402Escrow` | [`0xb7384fe171670fba5af74fc8f5aa99ef084025cd`](https://explore.qore.network/address/0xb7384fe171670fba5af74fc8f5aa99ef084025cd), deployed in [`0xd8ce83c6…14cd8b`](https://explore.qore.network/tx/0xd8ce83c612f9b2371211ff0c4cc1ad5caf2e3a37ad08309796315efb4d14cd8b); withdrawal delay 120 s for this test deployment (the deploy script's default is 3,600 s) |
-| Perennial vault (accelerated demo rate) | `0x496AAa4D585B97c8a26095D97Af4bBfAd473798c`, position 1 |
+| Agent-budget vault ([Perennial](#works-with), accelerated test rate) | `0x496AAa4D585B97c8a26095D97Af4bBfAd473798c`, position 1 |
 | Asset | fUSD `0x97143B771D34ddb9130b807b135Ae675A5a963CA` |
 | Account | `0x825c2e0282c4681fad2f99F514d3D3003cd27432` / `qor1sfwzuq5zc35pltf0n863f57nqq7dyapj6gqlyg`: deployer, gateway, relayer and payer at once, so every payment returned to it |
 
@@ -197,14 +268,18 @@ called, closed afterwards; the deployment used a one-transaction window,
 because a scoped window refuses contract creation. Setting up a testnet run
 from scratch is described in [docs/quickstart.md](docs/quickstart.md).
 
-## Related projects
+## Works with
 
-- [Perennial](https://github.com/raldblox/perennial): a vault whose positions
-  can pay for API calls from their buffer with `pq-perennial`.
-- [Overwinter](https://github.com/raldblox/overwinter) (in development): an
-  inference service meant to charge through PQ-402.
+PQ-402 stands on its own: the escrow scheme needs nothing else. Two other
+projects use it:
 
-Neither is needed to use PQ-402.
+- **On-chain agent budgets.** [Perennial](https://github.com/raldblox/perennial)
+  is a vault where an owner sets money aside for an agent, which may spend only
+  what the vault allows. With `pq-perennial`, the agent pays for API calls
+  straight from that budget, signing the vault's `spend` with its ML-DSA-87
+  key. The recorded run used position 1 on its accelerated test vault.
+- **Paid inference.** [Overwinter](https://github.com/raldblox/overwinter)
+  (in development) is an inference service meant to charge through PQ-402.
 
 ## Documents
 

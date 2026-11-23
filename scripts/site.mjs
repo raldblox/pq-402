@@ -64,7 +64,7 @@ const settlement = (scheme) => run.transactions.find((t) => t.what.includes(`(${
 const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-6)}` : "not recorded");
 const proof = [
   `Paid from an escrow (pq-erc20): ${short(settlement("pq-erc20"))}`,
-  `Paid from a Perennial position (pq-perennial): ${short(settlement("pq-perennial"))}`,
+  `Paid from an on-chain agent budget (pq-perennial): ${short(settlement("pq-perennial"))}`,
   "Answers sealed with ML-KEM-1024 to the payer's registered key; receipts signed with ML-DSA-87",
 ];
 
