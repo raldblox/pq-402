@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-23
+
+### Fixed
+
+- The relayer no longer sends `settle` and `spend` with a fixed 350,000 gas
+  limit, which ran a Perennial spend that had to redeem principal out of gas
+  on the testnet (`0xbacd85244ff115139ef555e01ab93fa42e09ffc2cf8c1bc497453c53eca75d26`).
+  `EvmSettler` estimates each call, adds 20% (`gasHeadroomPercent`), refuses
+  to send above `maxGas` (default 1,000,000) or when the estimate reverts, and
+  keeps the decoded revert reason. A fixed `gas` option still overrides it.
+
+
 ### Added
 
 - `pnpm demo` (`examples/demo.ts`): one complete run on the testnet, a
@@ -84,7 +96,8 @@ All notable changes to this project are documented here. The format follows
   testnet setup script.
 - Specification, decision records and threat model.
 
-[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/raldblox/pq-402/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/raldblox/pq-402/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/raldblox/pq-402/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/raldblox/pq-402/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/raldblox/pq-402/compare/v0.1.0...v0.1.1

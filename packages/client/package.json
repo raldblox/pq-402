@@ -1,6 +1,6 @@
 {
   "name": "@pq402/client",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PQ-402 client: a fetch wrapper that answers 402 with an ML-DSA-87 signed payment, seals the request body with ML-KEM-1024, retries and opens the sealed response.",
   "license": "MIT",
   "type": "module",
