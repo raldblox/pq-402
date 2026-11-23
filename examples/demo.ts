@@ -60,7 +60,8 @@ const MAX_FEE = 150_000_000_000n; // 150 gwei; the base fee read 100 gwei on 16 
 const PRIORITY_FEE = 1_000_000_000n;
 const QOR_FLOOR = 3_000_000n; // uqor: stop rather than let an account drop below 3 QOR
 const DEPOSIT = BigInt(process.env.DEMO_DEPOSIT ?? "10000"); // 0.01 fUSD into the escrow
-const GAS = { approve: 70_000n, deposit: 130_000n, spend: 450_000n, request: 350_000n, withdraw: 130_000n };
+// spend is the cap for both relayed calls; a spend that draws principal can exceed 350,000.
+const GAS = { approve: 70_000n, deposit: 130_000n, spend: 600_000n, request: 350_000n, withdraw: 130_000n };
 
 interface Step {
   title: string;
@@ -350,7 +351,8 @@ async function main() {
     const settler = new EvmSettler({
       publicClient: reader,
       walletClient: gatewayWallet,
-      gas: GAS.spend,
+      // Each call is estimated; GAS.spend caps it, and the window is sized for that cap.
+      maxGas: GAS.spend,
       maxFeePerGas: MAX_FEE,
       maxPriorityFeePerGas: PRIORITY_FEE,
     });

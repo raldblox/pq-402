@@ -7,6 +7,8 @@ import {
   type PerennialSpend,
 } from "@pq402/core";
 import {
+  BaseError,
+  ContractFunctionRevertedError,
   createPublicClient,
   parseEventLogs,
   hexToBytes,
@@ -164,11 +166,21 @@ export interface EvmSettlerOptions {
   publicClient: PublicClient;
   walletClient: WalletClient<Transport, Chain, Account>;
   /**
-   * Gas limit for `settle` and `spend`. The EVM lane bills at least half the
-   * limit, so keep it near the measured cost: `settle` used 253,160 and
-   * 253,388 gas on the testnet (16 November 2026). Default 350,000.
+   * A fixed gas limit for every `settle` and `spend`. When unset (the
+   * default), each call is estimated with `eth_estimateGas` and sent with
+   * {@link gasHeadroomPercent} on top: a Perennial spend that has to redeem
+   * principal costs far more than one paid from the buffer. The EVM lane
+   * bills at least half the limit, so a generous constant would overcharge.
    */
   gas?: bigint;
+  /** Added to the estimate, in percent. Default 20. */
+  gasHeadroomPercent?: number;
+  /**
+   * Largest limit the settler will send. A call estimated above it is refused
+   * before anything is sent. Size the relayer's EVM window for it.
+   * Default 1,000,000.
+   */
+  maxGas?: bigint;
   /**
    * Fee caps. Each transaction reserves `gas × maxFeePerGas` of the relayer's
    * EVM window, so leaving them to the wallet's defaults (2 × base fee) can
@@ -187,12 +199,47 @@ export class EvmSettler implements Settler {
   }
 
   private fees() {
-    const { gas, maxFeePerGas, maxPriorityFeePerGas } = this.options;
+    const { maxFeePerGas, maxPriorityFeePerGas } = this.options;
     return {
-      gas: gas ?? 350_000n,
       ...(maxFeePerGas !== undefined ? { maxFeePerGas } : {}),
       ...(maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas } : {}),
     };
+  }
+
+  /**
+   * The gas limit for `call`: the fixed `gas` option if set, otherwise the
+   * node's estimate plus headroom. An estimate that reverts (the contract
+   * would refuse the call) or exceeds `maxGas` is an error, and nothing is sent.
+   */
+  private async gasFor(
+    call: Parameters<PublicClient["estimateContractGas"]>[0],
+    what: string,
+  ): Promise<bigint> {
+    if (this.options.gas !== undefined) return this.options.gas;
+    const maxGas = this.options.maxGas ?? 1_000_000n;
+    let estimate: bigint;
+    try {
+      estimate = await this.options.publicClient.estimateContractGas(call);
+    } catch (err) {
+      // viem decodes a custom error (BudgetExceeded, InsufficientBuffer, ...); keep its name.
+      const revert =
+        err instanceof BaseError ? err.walk((e) => e instanceof ContractFunctionRevertedError) : null;
+      const decoded =
+        revert instanceof ContractFunctionRevertedError
+          ? (revert.data?.errorName ?? revert.reason)
+          : undefined;
+      const firstLine = err instanceof Error ? (err.message.split(/\r?\n/)[0] ?? err.message) : String(err);
+      const reason = decoded ? `${decoded} (${firstLine})` : firstLine;
+      throw new Error(`${what} would revert, not sent: ${reason}`, { cause: err });
+    }
+    const headroom = BigInt(Math.round((this.options.gasHeadroomPercent ?? 20) * 100));
+    const limit = (estimate * (10_000n + headroom) + 9_999n) / 10_000n;
+    if (limit > maxGas) {
+      throw new Error(
+        `${what} needs about ${estimate} gas (${limit} with headroom), above the cap of ${maxGas}; not sent`,
+      );
+    }
+    return limit;
   }
 
   async settle(payment: Payment, signature: Uint8Array) {
@@ -210,9 +257,9 @@ export class EvmSettler implements Settler {
       `0x${Buffer.from(signature).toString("hex")}`,
     ] as const;
     const call = { address: payment.escrow, abi: pq402EscrowAbi, functionName: "settle", args } as const;
-    // Simulate first: a payment the contract would refuse costs nothing and reports why.
-    await publicClient.simulateContract({ ...call, account: walletClient.account });
-    const hash = await walletClient.writeContract({ ...call, ...this.fees() });
+    // Estimate first: a payment the contract would refuse costs nothing and reports why.
+    const gas = await this.gasFor({ ...call, account: walletClient.account }, "settle");
+    const hash = await walletClient.writeContract({ ...call, gas, ...this.fees() });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`settlement reverted in ${hash}`);
     const block = await publicClient.getBlock({ blockHash: receipt.blockHash });
@@ -228,10 +275,11 @@ export class EvmSettler implements Settler {
       functionName: "spend",
       args: [s.positionId, s.to, s.amount, s.ref, s.deadline, `0x${Buffer.from(signature).toString("hex")}`],
     } as const;
-    // Simulate first: a spend the vault would refuse (BudgetExceeded, InsufficientBuffer)
-    // costs nothing and its revert reason reaches the facilitator.
-    await publicClient.simulateContract({ ...call, account: walletClient.account });
-    const hash = await walletClient.writeContract({ ...call, ...this.fees() });
+    // Estimate first: a spend the vault would refuse (BudgetExceeded, InsufficientBuffer)
+    // costs nothing and its revert reason reaches the facilitator. A spend that redeems
+    // principal costs more than one paid from the buffer; the estimate covers both.
+    const gas = await this.gasFor({ ...call, account: walletClient.account }, "spend");
+    const hash = await walletClient.writeContract({ ...call, gas, ...this.fees() });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== "success") throw new Error(`spend reverted in ${hash}`);
     const spent = parseEventLogs({ abi: perennialVaultAbi, eventName: "Spent", logs: receipt.logs }).find(

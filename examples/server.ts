@@ -107,10 +107,12 @@ export async function testnetBackend(): Promise<Backend> {
   const walletClient = createWalletClient({ account: gateway.evm!, chain, transport: http() });
   return {
     chain: new EvmChainReader({ network: qorechainTestnet, publicClient }),
-    // Fee cap as testnet.ts sizes its windows (250 gwei a transaction), so settlements fit.
+    // Fee and gas caps as testnet.ts sizes its windows (600,000 gas at 250 gwei a
+    // transaction), so settlements fit; each call is estimated below that cap.
     settler: new EvmSettler({
       publicClient,
       walletClient,
+      maxGas: 600_000n,
       maxFeePerGas: 250_000_000_000n,
       maxPriorityFeePerGas: 1_000_000_000n,
     }),
